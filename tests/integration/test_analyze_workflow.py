@@ -13,6 +13,7 @@ from threatmodeler.contracts.artifacts import ArtifactBundle
 from threatmodeler.contracts.system_model import CanonicalSystemModel
 from typer.testing import CliRunner
 
+from tests.fixtures.bundle_properties import assert_bundle_integrity
 from tests.fixtures.expected_outputs import (
     EXPECTED_ANALYZE_JSON_COUNT,
     EXPECTED_ARTIFACT_JSON_NAMES,
@@ -77,6 +78,7 @@ class TestAnalyzeWorkflowPositive:
         assert bundle.artifact_id == "artifact-bundle"
         assert len(bundle.stride_threat_register.threats) == 1
         assert len(bundle.missing_information_report.items) == 2
+        assert_bundle_integrity(bundle, system_model=system_model)
 
     def test_analyze_succeeds_when_fail_on_missing_and_no_gaps(
         self,

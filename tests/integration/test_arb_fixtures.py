@@ -10,8 +10,10 @@ from threatmodeler.cli.main import build_app
 from threatmodeler.config.settings import Settings
 from threatmodeler.contracts.artifacts import ArtifactBundle
 from threatmodeler.contracts.integration import ParsedDocument
+from threatmodeler.contracts.system_model import CanonicalSystemModel
 from typer.testing import CliRunner
 
+from tests.fixtures.bundle_properties import assert_bundle_integrity
 from tests.fixtures.expected_outputs import (
     EXPECTED_ANALYZE_JSON_COUNT,
     EXPECTED_ARTIFACT_JSON_NAMES,
@@ -217,11 +219,15 @@ class TestArbFixtureAnalyzePositive:
         assert_expected_artifact_json_files(output_dir)
         assert len(list(output_dir.glob("*.json"))) == EXPECTED_ANALYZE_JSON_COUNT
         assert_expected_rendered_outputs(output_dir / "rendered")
+        system_model = CanonicalSystemModel.model_validate_json(
+            (output_dir / "system-model.json").read_text()
+        )
         bundle = ArtifactBundle.model_validate_json(
             (output_dir / "artifact-bundle.json").read_text()
         )
         assert bundle.artifact_id == "artifact-bundle"
         assert len(bundle.missing_information_report.items) == 2
+        assert_bundle_integrity(bundle, system_model=system_model)
 
 
 class TestArbFixturePipelinePositive:

@@ -23,6 +23,8 @@ from threatmodeler.shared.constants import LogLevel
 from threatmodeler.validation.artifact_validator import PydanticArtifactValidator
 from typer.testing import CliRunner
 
+from tests.fixtures.bundle_properties import assert_bundle_integrity
+
 
 class TestArtifactGenerationEnginePositive:
     """Verify supported inputs and successful behavior."""
@@ -56,6 +58,7 @@ class TestArtifactGenerationEnginePositive:
             "Token lifetime is not documented."
         )
         assert ArtifactBundle.model_validate_json(bundle.model_dump_json()) == bundle
+        assert_bundle_integrity(bundle, system_model=canonical_system_model)
 
     def test_file_workflow_writes_all_twenty_named_artifacts(
         self,
