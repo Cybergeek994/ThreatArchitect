@@ -9,7 +9,7 @@ description = "Agent-driven architecture threat modeling CLI"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
-authors = [{ name = "Threatmodeler Contributors" }]
+authors = [{ name = "cybergeek" }]
 dependencies = [
   "openai>=1.40,<2",
   "github-copilot-sdk>=1.0,<2",
