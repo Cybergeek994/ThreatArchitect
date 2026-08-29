@@ -1,0 +1,164 @@
+[
+  {
+    "id": "V1.2.1",
+    "chapter": "V1",
+    "name": "Use a secure software development lifecycle",
+    "keywords": ["architecture", "design", "threat model", "sdlc"]
+  },
+  {
+    "id": "V1.4.1",
+    "chapter": "V1",
+    "name": "High-value assets are identified and protected",
+    "keywords": ["asset", "critical", "high-value"]
+  },
+  {
+    "id": "V2.1.1",
+    "chapter": "V2",
+    "name": "Passwords use a cryptographically strong hash",
+    "keywords": ["password", "credential", "hash"]
+  },
+  {
+    "id": "V2.2.1",
+    "chapter": "V2",
+    "name": "Anti-automation controls on authentication",
+    "keywords": ["authentication", "login", "mfa", "oauth", "identity"]
+  },
+  {
+    "id": "V2.5.1",
+    "chapter": "V2",
+    "name": "Credential recovery is resistant to account takeover",
+    "keywords": ["spoofing", "account", "session", "token"]
+  },
+  {
+    "id": "V2.8.1",
+    "chapter": "V2",
+    "name": "Multi-factor authentication is available",
+    "keywords": ["mfa", "multi-factor", "otp", "authenticator"]
+  },
+  {
+    "id": "V3.3.1",
+    "chapter": "V3",
+    "name": "Session tokens are generated with sufficient entropy",
+    "keywords": ["session", "cookie", "token"]
+  },
+  {
+    "id": "V3.5.1",
+    "chapter": "V3",
+    "name": "Logout and session timeout are enforced",
+    "keywords": ["logout", "timeout", "session"]
+  },
+  {
+    "id": "V4.1.1",
+    "chapter": "V4",
+    "name": "Access control is enforced on the trusted service",
+    "keywords": ["authorization", "access control", "rbac", "privilege"]
+  },
+  {
+    "id": "V4.2.1",
+    "chapter": "V4",
+    "name": "Principle of least privilege is applied",
+    "keywords": ["least privilege", "elevation", "admin", "role"]
+  },
+  {
+    "id": "V5.1.1",
+    "chapter": "V5",
+    "name": "Input is validated on a trusted service",
+    "keywords": ["input", "validation", "injection", "tampering"]
+  },
+  {
+    "id": "V5.3.1",
+    "chapter": "V5",
+    "name": "Output encoding prevents injection",
+    "keywords": ["integrity", "encoding", "xss", "injection"]
+  },
+  {
+    "id": "V6.2.1",
+    "chapter": "V6",
+    "name": "Data is classified and protected according to sensitivity",
+    "keywords": ["classification", "confidential", "pii", "disclosure"]
+  },
+  {
+    "id": "V6.2.2",
+    "chapter": "V6",
+    "name": "Secrets are not stored in source or unprotected stores",
+    "keywords": ["secret", "key", "credential store"]
+  },
+  {
+    "id": "V7.1.1",
+    "chapter": "V7",
+    "name": "Security events are logged",
+    "keywords": ["logging", "audit", "repudiation"]
+  },
+  {
+    "id": "V7.2.1",
+    "chapter": "V7",
+    "name": "Logs are protected from tampering",
+    "keywords": ["log integrity", "tamper", "audit trail"]
+  },
+  {
+    "id": "V8.1.1",
+    "chapter": "V8",
+    "name": "Sensitive data is encrypted in transit",
+    "keywords": ["tls", "https", "in transit", "encryption", "confidentiality"]
+  },
+  {
+    "id": "V8.2.1",
+    "chapter": "V8",
+    "name": "Sensitive data is encrypted at rest",
+    "keywords": ["at rest", "database", "storage", "encrypt"]
+  },
+  {
+    "id": "V9.1.1",
+    "chapter": "V9",
+    "name": "Communications use current TLS configuration",
+    "keywords": ["tls", "certificate", "mtls", "https"]
+  },
+  {
+    "id": "V10.3.1",
+    "chapter": "V10",
+    "name": "Malicious file upload is prevented",
+    "keywords": ["upload", "malware", "file"]
+  },
+  {
+    "id": "V11.1.1",
+    "chapter": "V11",
+    "name": "Business logic cannot be abused out of order",
+    "keywords": ["workflow", "business logic", "abuse"]
+  },
+  {
+    "id": "V12.1.1",
+    "chapter": "V12",
+    "name": "Files and resources are served from trusted locations",
+    "keywords": ["file", "path", "resource"]
+  },
+  {
+    "id": "V12.4.1",
+    "chapter": "V12",
+    "name": "Denial-of-service protections are in place",
+    "keywords": ["denial of service", "rate limit", "availability", "quota"]
+  },
+  {
+    "id": "V13.1.1",
+    "chapter": "V13",
+    "name": "API authentication is required for sensitive operations",
+    "keywords": ["api", "endpoint", "authentication"]
+  },
+  {
+    "id": "V13.2.1",
+    "chapter": "V13",
+    "name": "Mass assignment and unexpected properties are rejected",
+    "keywords": ["api", "schema", "mass assignment"]
+  },
+  {
+    "id": "V14.1.1",
+    "chapter": "V14",
+    "name": "Build and deploy pipelines are documented and repeatable",
+    "keywords": ["build", "deploy", "pipeline", "configuration"]
+  },
+  {
+    "id": "V14.2.1",
+    "chapter": "V14",
+    "name": "Third-party components are inventoried and patched",
+    "keywords": ["dependency", "third-party", "patch", "library"]
+  }
+]

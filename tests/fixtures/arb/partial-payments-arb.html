@@ -1,0 +1,40 @@
+<html>
+  <head><title>Payments Platform ARB (Draft)</title></head>
+  <body>
+    <h1>Architecture Overview</h1>
+    <p>
+      The payments platform exposes an HTTPS API that stores payment records in a database.
+      Customers interact through a web checkout experience. The system is business critical
+      but several operational details are still being confirmed.
+    </p>
+
+    <h2>Known components</h2>
+    <table>
+      <tr><th>Component</th><th>Technology</th></tr>
+      <tr><td>Payments API</td><td>Python service</td></tr>
+      <tr><td>Payment database</td><td>PostgreSQL</td></tr>
+      <tr><td>Web checkout</td><td>React application</td></tr>
+    </table>
+
+    <h2>Known data flows</h2>
+    <ul>
+      <li>Web checkout calls the Payments API over HTTPS.</li>
+      <li>Payments API persists transactions to PostgreSQL.</li>
+    </ul>
+
+    <h2>Authentication</h2>
+    <p>Customers authenticate with OAuth 2.0. Administrator MFA policy is under review.</p>
+
+    <h2>Open questions and missing information</h2>
+    <ul>
+      <li>Application owner and on-call rotation are not documented.</li>
+      <li>Deployment regions and disaster recovery strategy are not defined.</li>
+      <li>Trust boundaries between DMZ and internal services are not shown.</li>
+      <li>Queue, cache, and external processor integrations are not described.</li>
+      <li>Token lifetime and session timeout values are not specified.</li>
+      <li>Backup retention and encryption-at-rest settings are not confirmed.</li>
+    </ul>
+
+    <img src="payments-runtime.drawio" alt="Draft architecture diagram" />
+  </body>
+</html>

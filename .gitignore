@@ -1,0 +1,27 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+.venv/
+venv/
+dist/
+build/
+.idea/
+.vscode/
+.env
+.cursor/
+
+# Pipeline and local run outputs
+artifacts/
+out/
+out-*/
+out_*/
+journal/
+
+# Lock files from optional tooling (use pyproject + pip install -e ".[dev]")
+uv.lock

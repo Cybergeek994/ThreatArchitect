@@ -1,0 +1,1 @@
+"""Core threat-modeling domain."""

@@ -1,0 +1,88 @@
+<html>
+  <head><title>Payments Platform ARB</title></head>
+  <body>
+    <h1>Architecture Review Board: Payments Platform</h1>
+    <p>
+      Owner: Payments Engineering. Business purpose: process customer card and wallet
+      payments in production. Criticality: critical. Data classification: restricted.
+      Environments: production and staging in Example Cloud region-1 and region-2.
+    </p>
+
+    <h2>Actors</h2>
+    <ul>
+      <li>Customer — human user initiating payments from the web application</li>
+      <li>Payments administrator — internal operator with privileged console access</li>
+      <li>External payment processor — third-party acquirer receiving settlement batches</li>
+    </ul>
+
+    <h2>Components and data stores</h2>
+    <table>
+      <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+      <tr><td>Web Application</td><td>Web UI</td><td>Customer-facing checkout experience</td></tr>
+      <tr><td>Payments API</td><td>API</td><td>Public REST API validating and orchestrating payments</td></tr>
+      <tr><td>Identity Provider</td><td>Identity</td><td>OAuth 2.0 authorization server with MFA</td></tr>
+      <tr><td>Payment Queue</td><td>Queue</td><td>Asynchronous settlement and retry processing</td></tr>
+      <tr><td>Payment Records DB</td><td>Database</td><td>PostgreSQL storing payment tokens and amounts encrypted at rest</td></tr>
+      <tr><td>Session Cache</td><td>Cache</td><td>Redis cache for short-lived checkout sessions</td></tr>
+    </table>
+
+    <h2>Data flows</h2>
+    <ol>
+      <li>Customer browser to Web Application over HTTPS with OAuth 2.0 bearer tokens</li>
+      <li>Web Application to Payments API over HTTPS with mutual TLS inside the VPC</li>
+      <li>Payments API to Identity Provider over HTTPS for token validation</li>
+      <li>Payments API to Payment Records DB over TLS/PostgreSQL using workload identity</li>
+      <li>Payments API to Payment Queue over TLS/AMQP for settlement jobs</li>
+      <li>Payment Queue to External payment processor over HTTPS with signed webhooks</li>
+    </ol>
+
+    <h2>Trust boundaries and entry points</h2>
+    <p>
+      Production network boundary contains the Web Application, Payments API, queue, databases,
+      and cache. DMZ boundary exposes only the public Payments API HTTPS endpoint and the
+      customer web entry point. External entry point: public Payments API on HTTPS with OAuth
+      2.0 and MFA for administrators. Internal entry point: admin console restricted to corporate
+      SSO.
+    </p>
+
+    <h2>Authentication and authorization</h2>
+    <p>
+      Customers authenticate through the identity provider using OAuth 2.0 authorization code
+      with PKCE. Administrators require MFA. Service-to-service calls use workload identity and
+      scoped service accounts. Database access is role-based and limited to the Payments API
+      service account.
+    </p>
+
+    <h2>Deployment</h2>
+    <p>
+      Deployment type: cloud (Example Cloud). Provider-managed Kubernetes runs the Web Application,
+      Payments API, and queue workers. Managed PostgreSQL and Redis provide persistence. Regions:
+      region-1 (primary) and region-2 (DR). Backups: encrypted daily snapshots retained 35 days.
+    </p>
+
+    <h2>Assumptions</h2>
+    <ul>
+      <li>The architecture document represents the current production baseline.</li>
+      <li>All external integrations use TLS 1.2 or higher.</li>
+      <li>Token lifetimes follow the identity provider defaults unless noted otherwise.</li>
+    </ul>
+
+    <h2>Runtime diagram</h2>
+    <ac:structured-macro ac:name="drawio">
+      <ac:plain-text-body>
+        <mxGraphModel>
+          <root>
+            <mxCell id="1" value="Web Application" vertex="1"/>
+            <mxCell id="2" value="Payments API" vertex="1"/>
+            <mxCell id="3" value="Payment Records DB" vertex="1"/>
+            <mxCell id="4" value="Identity Provider" vertex="1"/>
+            <mxCell id="5" value="Payment Queue" vertex="1"/>
+            <mxCell id="e1" edge="1" source="1" target="2" value="HTTPS"/>
+            <mxCell id="e2" edge="1" source="2" target="3" value="TLS"/>
+          </root>
+        </mxGraphModel>
+      </ac:plain-text-body>
+    </ac:structured-macro>
+    <img src="payments-runtime.drawio" alt="Payments runtime diagram" />
+  </body>
+</html>
