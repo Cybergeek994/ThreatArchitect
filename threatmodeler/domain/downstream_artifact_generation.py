@@ -20,7 +20,10 @@ from threatmodeler.contracts.artifacts import (
 from threatmodeler.contracts.system_model import CanonicalSystemModel
 from threatmodeler.domain.agent_schema_bound_generator import AgentSchemaBoundArtifactGenerator
 from threatmodeler.domain.attack_tree_generation import AttackTreeGenerationService
-from threatmodeler.domain.control_catalogs.owasp_asvs import OwaspAsvsCatalog
+from threatmodeler.domain.control_catalogs.control_mapping_candidate_service import (
+    ControlMappingCandidateService,
+)
+from threatmodeler.domain.control_catalogs.asvs_control_registry import AsvsControlRegistry
 from threatmodeler.domain.control_mapping import ControlMappingService
 from threatmodeler.domain.dfd_generation import DfdGenerationService
 from threatmodeler.domain.mitigation_generation import MitigationGenerationService
@@ -33,6 +36,10 @@ from threatmodeler.ports.prompt_builder import PromptBuilder
 from threatmodeler.ports.schema_provider import SchemaProvider
 from threatmodeler.ports.tool_calling_provider import ToolCallingProvider
 from threatmodeler.shared.constants import ControlFrameworkName
+from threatmodeler.ports.artifact_construction_session_factory import ItemValidator
+from threatmodeler.validation.control_mapping_candidate_validator import (
+    build_candidate_membership_validator,
+)
 from threatmodeler.validation.control_mapping_validator import ControlMappingCatalogRule
 
 
@@ -248,7 +255,8 @@ class AgentDownstreamArtifactGenerationStrategy:
         tool_calling_provider: ToolCallingProvider,
         prompt_registry: ArtifactPromptBuilderRegistry,
         schema_provider: SchemaProvider,
-        control_catalog: OwaspAsvsCatalog | None = None,
+        candidate_service: ControlMappingCandidateService,
+        control_registry: AsvsControlRegistry,
         max_attempts: int = 1,
     ) -> None:
         self._generator = AgentSchemaBoundArtifactGenerator(
@@ -257,8 +265,8 @@ class AgentDownstreamArtifactGenerationStrategy:
             max_attempts=max_attempts,
         )
         self._prompt_registry = prompt_registry
-        self._control_catalog = control_catalog or OwaspAsvsCatalog.load_default()
-        self._control_mapping_rule = ControlMappingCatalogRule(self._control_catalog)
+        self._candidate_service = candidate_service
+        self._control_mapping_rule = ControlMappingCatalogRule(control_registry)
 
     def bind_journal(self, journal: ConstructionJournal | None) -> None:
         """Bind the per-run construction journal onto the shared generator."""
@@ -375,6 +383,13 @@ class AgentDownstreamArtifactGenerationStrategy:
         threat_register: StrideThreatRegister,
     ) -> ControlMapping:
         """Generate control mappings from validated downstream artifacts."""
+        ranked_candidates, catalog_provenance, allowed_ids = self._candidate_service.rank_all(
+            model,
+            security_requirements,
+            risk_register,
+            mitigation_plan,
+            threat_register,
+        )
         mapping = self._generate(
             task_name="generate_control_mapping",
             output_model=ControlMapping,
@@ -385,9 +400,11 @@ class AgentDownstreamArtifactGenerationStrategy:
                 "mitigation_plan": self._generator.serialize(mitigation_plan),
                 "security_requirements": self._generator.serialize(security_requirements),
                 "stride_threat_register": self._generator.serialize(threat_register),
-                "control_catalog": self._control_catalog.serialize(),
+                "ranked_candidates_by_requirement": ranked_candidates,
+                "catalog_provenance": catalog_provenance,
                 "control_framework": ControlFrameworkName.OWASP_ASVS,
             },
+            item_validator=build_candidate_membership_validator(allowed_ids),
         )
         return self._control_mapping_rule.validate(mapping)
 
@@ -435,10 +452,12 @@ class AgentDownstreamArtifactGenerationStrategy:
         output_model: type[T],
         prompt_builder: PromptBuilder,
         input_payload: dict[str, JsonValue],
+        item_validator: ItemValidator | None = None,
     ) -> T:
         return self._generator.generate(
             task_name=task_name,
             output_model=output_model,
             prompt_builder=prompt_builder,
             input_payload=input_payload,
+            item_validator=item_validator,
         )

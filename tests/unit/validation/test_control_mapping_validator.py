@@ -13,7 +13,7 @@ class TestControlMappingCatalogRulePositive:
 
     def test_valid_asvs_mapping_is_returned(self) -> None:
         mapping = self._mapping(
-            self._entry(framework=ControlFrameworkName.OWASP_ASVS, control_id="V2.2.1")
+            self._entry(framework=ControlFrameworkName.OWASP_ASVS, control_id="v5.0.0-2.2.1")
         )
 
         validated = ControlMappingCatalogRule().validate(mapping)

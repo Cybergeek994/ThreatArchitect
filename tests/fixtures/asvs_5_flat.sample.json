@@ -1,0 +1,22 @@
+{
+  "requirements": [
+    {
+      "chapter_id": "V2",
+      "chapter_name": "Authentication",
+      "section_id": "V2.2",
+      "section_name": "General Authenticator Security",
+      "req_id": "V2.2.1",
+      "req_description": "Verify that anti-automation controls are in place.",
+      "L": "2"
+    },
+    {
+      "chapter_id": "V8",
+      "chapter_name": "Authorization",
+      "section_id": "V8.1",
+      "section_name": "General Authorization Design",
+      "req_id": "V8.1.1",
+      "req_description": "Verify that authorization is enforced on every request.",
+      "L": "1"
+    }
+  ]
+}

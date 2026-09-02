@@ -7,9 +7,18 @@ from pydantic import JsonValue
 from threatmodeler.contracts.artifacts import ArtifactModel
 from threatmodeler.contracts.system_model import CanonicalSystemModel
 from threatmodeler.domain.artifact_metadata import ArtifactMetadataService
-from threatmodeler.domain.control_mapping import ControlMappingService
+from threatmodeler.domain.control_catalogs.control_mapping_candidate_service import (
+    ControlMappingCandidateService,
+)
 from threatmodeler.domain.downstream_artifact_generation import (
     AgentDownstreamArtifactGenerationStrategy,
+)
+from threatmodeler.infrastructure.control_catalogs.asvs_control_registry_factory import (
+    AsvsControlRegistryFactory,
+)
+from tests.fixtures.mock_asvs_semantic_ranker import (
+    MockAsvsSemanticRanker,
+    create_mock_control_mapping_service,
 )
 from threatmodeler.domain.mitigation_generation import MitigationGenerationService
 from threatmodeler.domain.risk_scoring import RiskScoringService
@@ -47,6 +56,11 @@ def agent_downstream_strategy_factory() -> Callable[
         task_overrides: dict[str, dict[str, JsonValue]] | None = None,
     ) -> AgentDownstreamArtifactGenerationStrategy:
         schema_provider = PydanticSchemaProvider()
+        registry = AsvsControlRegistryFactory.packaged().create()
+        candidate_service = ControlMappingCandidateService(
+            registry,
+            MockAsvsSemanticRanker(registry),
+        )
         return AgentDownstreamArtifactGenerationStrategy(
             tool_calling_provider=create_mock_agent_provider_for_agent_assisted(task_overrides),
             prompt_registry=ArtifactPromptBuilderFactory(
@@ -54,6 +68,8 @@ def agent_downstream_strategy_factory() -> Callable[
                 schema_provider,
             ).create(),
             schema_provider=schema_provider,
+            candidate_service=candidate_service,
+            control_registry=registry,
         )
 
     return create
@@ -247,7 +263,7 @@ class TestAgentControlMappingCatalogErrors:
             canonical_system_model, threats, risks
         )
         payload = (
-            ControlMappingService(metadata)
+            create_mock_control_mapping_service(metadata)
             .generate(canonical_system_model, risks, mitigations, requirements)
             .model_dump(mode="json")
         )

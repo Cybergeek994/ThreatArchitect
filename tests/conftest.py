@@ -36,7 +36,7 @@ from threatmodeler.contracts.system_model import (
 )
 from threatmodeler.domain.artifact_metadata import ArtifactMetadataService
 from threatmodeler.domain.attack_tree_generation import AttackTreeGenerationService
-from threatmodeler.domain.control_mapping import ControlMappingService
+from tests.fixtures.mock_asvs_semantic_ranker import create_mock_control_mapping_service
 from threatmodeler.domain.dfd_generation import DfdGenerationService
 from threatmodeler.domain.downstream_artifact_generation import (
     DeterministicDownstreamArtifactGenerationStrategy,
@@ -366,7 +366,7 @@ def threat_modeling_service_factory() -> Callable[
             stride_service=stride_service,
             risk_service=RiskScoringService(metadata),
             mitigation_service=MitigationGenerationService(metadata),
-            control_mapping_service=ControlMappingService(metadata),
+            control_mapping_service=create_mock_control_mapping_service(metadata),
             report_service=report_service,
         )
         return ThreatModelingService(

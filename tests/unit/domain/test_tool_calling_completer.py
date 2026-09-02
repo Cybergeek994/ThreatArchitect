@@ -57,3 +57,34 @@ class TestSchemaBoundToolCallingCompleter:
             )
         assert captured.value.error_code == "AGENT_PROVIDER_FAILED"
         assert provider.complete_with_tools.call_count == 2
+
+    def test_completer_honors_session_factory_override(self) -> None:
+        custom_factory = Mock()
+        custom_session = Mock()
+        custom_session.tool_definitions.return_value = []
+        custom_factory.create.return_value = custom_session
+        provider = Mock()
+        provider.complete_with_tools.return_value = Mock(
+            output_payload={"title": "Demo", "items": []},
+            confidence=1.0,
+            raw_response="{}",
+            provider_name="mock",
+            model_name="mock",
+        )
+        completer = SchemaBoundToolCallingCompleter(provider)
+        completer.complete(
+            AgentRequest(
+                task_name="generate_demo",
+                instructions="Build",
+                input_payload={},
+                expected_schema_name="_Artifact",
+                messages=[],
+                temperature=0.0,
+                max_output_tokens=100,
+            ),
+            TestToolCallingCompleterModels.MultiFinish,
+            DiscardingConstructionJournal(),
+            session_factory=custom_factory,
+        )
+
+        custom_factory.create.assert_called_once()

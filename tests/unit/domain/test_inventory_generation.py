@@ -297,3 +297,104 @@ class TestInventoryGenerationAuthMapping:
         deployment_model = service.generate_deployment_model(model)
 
         assert deployment_model.component_placements["component-api"] == "Cloud Deployment"
+
+    def test_asset_inventory_resolves_trust_levels_from_flows_and_actors(
+        self,
+        canonical_system_model: CanonicalSystemModel,
+    ) -> None:
+        actor = canonical_system_model.actors[0].model_copy(
+            update={"trust_level_ids": ["trust-level-customer"]}
+        )
+        entry = canonical_system_model.entry_points[0].model_copy(
+            update={"trust_level_ids": ["trust-level-customer"]}
+        )
+        store = canonical_system_model.data_stores[0]
+        api = canonical_system_model.components[0]
+        store_to_api = canonical_system_model.data_flows[0].model_copy(
+            update={
+                "id": "flow-read",
+                "name": "Read Payment",
+                "source_component_id": store.id,
+                "destination_component_id": api.id,
+                "actor_ids": [actor.id],
+            }
+        )
+        api_to_store = canonical_system_model.data_flows[0].model_copy(
+            update={
+                "id": "flow-write",
+                "name": "Write Payment",
+                "source_component_id": api.id,
+                "destination_component_id": store.id,
+                "actor_ids": [],
+            }
+        )
+        model = canonical_system_model.model_copy(
+            update={
+                "actors": [actor],
+                "entry_points": [entry],
+                "data_flows": [store_to_api, api_to_store],
+            }
+        )
+        service = InventoryGenerationService(ArtifactMetadataService())
+
+        inventory = service.generate_asset_inventory(model)
+
+        store_asset = next(asset for asset in inventory.assets if asset.name == store.name)
+        assert "trust-level-customer" in store_asset.trust_level_ids
+
+    def test_asset_inventory_skips_unrelated_entry_points_and_flows(
+        self,
+        canonical_system_model: CanonicalSystemModel,
+    ) -> None:
+        unrelated_component = canonical_system_model.components[0].model_copy(
+            update={"id": "component-other", "name": "Other API"}
+        )
+        unrelated_entry = canonical_system_model.entry_points[0].model_copy(
+            update={
+                "id": "entry-other",
+                "component_id": unrelated_component.id,
+                "trust_level_ids": ["trust-level-other"],
+            }
+        )
+        unrelated_flow = canonical_system_model.data_flows[0].model_copy(
+            update={
+                "id": "flow-unrelated",
+                "source_component_id": unrelated_component.id,
+                "destination_component_id": unrelated_component.id,
+                "actor_ids": [canonical_system_model.actors[0].id],
+            }
+        )
+        model = canonical_system_model.model_copy(
+            update={
+                "components": [canonical_system_model.components[0], unrelated_component],
+                "entry_points": [canonical_system_model.entry_points[0], unrelated_entry],
+                "data_flows": [canonical_system_model.data_flows[0], unrelated_flow],
+            }
+        )
+        service = InventoryGenerationService(ArtifactMetadataService())
+
+        inventory = service.generate_asset_inventory(model)
+
+        store_asset = next(
+            asset for asset in inventory.assets if asset.name == canonical_system_model.data_stores[0].name
+        )
+        assert "trust-level-other" not in store_asset.trust_level_ids
+
+    def test_asset_inventory_ignores_unknown_actor_references(
+        self,
+        canonical_system_model: CanonicalSystemModel,
+    ) -> None:
+        entry = canonical_system_model.entry_points[0].model_copy(
+            update={"actor_id": "missing-actor", "trust_level_ids": ["trust-level-customer"]}
+        )
+        flow = canonical_system_model.data_flows[0].model_copy(
+            update={"actor_ids": ["missing-actor"]}
+        )
+        model = canonical_system_model.model_copy(
+            update={"entry_points": [entry], "data_flows": [flow], "actors": []}
+        )
+        service = InventoryGenerationService(ArtifactMetadataService())
+
+        inventory = service.generate_asset_inventory(model)
+
+        assert any(asset.name == canonical_system_model.data_stores[0].name for asset in inventory.assets)

@@ -8,6 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from threatmodeler.shared.constants import (
     AgentProviderName,
+    AsvsFrameworkVersion,
     AzureOpenAiApiVersion,
     ControlFramework,
     DefaultPathName,
@@ -38,6 +39,10 @@ class Settings(BaseSettings):
     agent_low_confidence_threshold: Annotated[float, Field(ge=0.0, le=1.0)] = 0.5
     fail_on_missing_information: bool = False
     control_framework: ControlFramework = ControlFramework.OWASP_ASVS
+    control_framework_version: Annotated[str, Field(min_length=1)] = AsvsFrameworkVersion.V5_0_0
+    asvs_catalog_cache_dir: Path = Path(".cache/asvs-catalog")
+    asvs_catalog_ttl_hours: Annotated[int, Field(ge=1)] = 168
+    asvs_catalog_fetch_url: Annotated[str, Field(min_length=1)] | None = None
     azure_openai_api_version: Annotated[str, Field(min_length=1)] = (
         AzureOpenAiApiVersion.PREVIEW_2024_08_01
     )

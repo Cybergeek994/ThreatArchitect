@@ -175,6 +175,7 @@ def build_app(
             secure_prompt_template,
             repair_prompt_builder,
             tool_calling_provider=create_tool_calling_provider(active),
+            agent_provider=create_agent_provider(),
         ).create()
         return ArtifactGenerationService(
             system_model_loader=LocalSystemModelLoader(),

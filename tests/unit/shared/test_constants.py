@@ -16,7 +16,7 @@ class TestSharedConstantsPositive:
 
     def test_control_framework_identifiers_match_expected_values(self) -> None:
         assert ControlFramework.OWASP_ASVS.value == "owasp_asvs"
-        assert ControlFrameworkName.OWASP_ASVS.value == "OWASP ASVS 4.0"
+        assert ControlFrameworkName.OWASP_ASVS.value == "OWASP ASVS 5.0.0"
 
     def test_placeholder_authentication_contains_known_labels(self) -> None:
         assert "unknown" in PlaceholderAuthentication

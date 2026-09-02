@@ -6,7 +6,10 @@ import pytest
 from threatmodeler.contracts.artifacts import MissingInformationReport
 from threatmodeler.contracts.prompts import PromptBuildResult, PromptMessage, PromptRole
 from threatmodeler.contracts.system_model import CanonicalSystemModel
-from threatmodeler.domain.agent_schema_bound_generator import AgentSchemaBoundArtifactGenerator
+from threatmodeler.domain.agent_schema_bound_generator import (
+    AgentSchemaBoundArtifactGenerator,
+    _chain_item_validators,
+)
 from threatmodeler.domain.artifact_metadata import ArtifactMetadataService
 from threatmodeler.domain.report_generation import ReportGenerationService
 from threatmodeler.errors import AgentSchemaValidationError
@@ -121,3 +124,21 @@ class TestAgentSchemaBoundGeneratorErrors:
         assert context["task_name"] == "generate_missing_information"
         assert context["expected_schema_name"] == "MissingInformationReport"
         assert context["validation_errors"]
+
+
+class TestChainItemValidators:
+    """Verify optional item-validator chaining."""
+
+    def test_chain_returns_none_for_empty_input(self) -> None:
+        assert _chain_item_validators(None, None) is None
+
+    def test_chain_combines_multiple_validators(self) -> None:
+        def first(_list_field: str, _payload: object, _lists: object) -> list[str]:
+            return ["first"]
+
+        def second(_list_field: str, _payload: object, _lists: object) -> list[str]:
+            return ["second"]
+
+        chained = _chain_item_validators(first, second)
+        assert chained is not None
+        assert chained("controls", {}, {}) == ["first", "second"]

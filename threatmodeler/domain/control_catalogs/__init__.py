@@ -1,8 +1,8 @@
 """Security-control catalogs used by control mapping."""
 
-from threatmodeler.domain.control_catalogs.owasp_asvs import (
-    OwaspAsvsCatalog as OwaspAsvsCatalog,
+from threatmodeler.domain.control_catalogs.asvs_control_registry import (
+    AsvsControlRegistry as AsvsControlRegistry,
 )
-from threatmodeler.domain.control_catalogs.owasp_asvs import (
-    OwaspAsvsControl as OwaspAsvsControl,
+from threatmodeler.domain.control_catalogs.control_mapping_candidate_service import (
+    ControlMappingCandidateService as ControlMappingCandidateService,
 )

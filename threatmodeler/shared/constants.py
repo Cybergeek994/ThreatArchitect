@@ -22,11 +22,17 @@ class ControlFramework(StrEnum):
 class ControlFrameworkName(StrEnum):
     """Human-readable control-framework labels used in artifacts and prompts."""
 
-    OWASP_ASVS = "OWASP ASVS 4.0"
+    OWASP_ASVS = "OWASP ASVS 5.0.0"
+
+
+class AsvsFrameworkVersion(StrEnum):
+    """Supported OWASP ASVS release versions for catalog snapshots."""
+
+    V5_0_0 = "5.0.0"
 
 
 class AsvsChapter(StrEnum):
-    """OWASP ASVS chapter identifiers used by the curated catalog matcher."""
+    """Legacy ASVS 4.0 chapter identifiers used by the curated catalog matcher."""
 
     V1 = "V1"
     V2 = "V2"
@@ -34,6 +40,15 @@ class AsvsChapter(StrEnum):
     V5 = "V5"
     V8 = "V8"
     V12 = "V12"
+
+
+class AsvsCatalogFetchUrl(StrEnum):
+    """Remote URLs for official OWASP ASVS flat exports."""
+
+    V5_0_0_FLAT = (
+        "https://raw.githubusercontent.com/OWASP/ASVS/master/5.0/OWASP%20Application"
+        "%20Security%20Verification%20Standard%205.0.0-en.flat.json"
+    )
 
 
 class PlaceholderAuthentication(StrEnum):
@@ -51,6 +66,7 @@ class PackagedDataFile(StrEnum):
 
     PACKAGE = "threatmodeler.data"
     OWASP_ASVS_CONTROLS = "owasp_asvs_controls.json"
+    OWASP_ASVS_FLAT = "owasp_asvs_5.0.0.flat.json"
 
 
 class AgentProviderName(StrEnum):

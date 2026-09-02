@@ -1,4 +1,4 @@
-"""Deterministic OWASP ASVS mapping used by local mock providers."""
+"""Build control mappings from LLM-ranked ASVS candidates."""
 
 from threatmodeler.contracts.artifacts import (
     ControlMapping,
@@ -8,22 +8,35 @@ from threatmodeler.contracts.artifacts import (
     RiskRegister,
     SecurityRequirements,
 )
+from threatmodeler.contracts.control_catalog import RequirementMappingNeed
 from threatmodeler.contracts.system_model import CanonicalSystemModel
 from threatmodeler.domain.artifact_metadata import ArtifactMetadataService
-from threatmodeler.domain.control_catalogs.owasp_asvs import OwaspAsvsCatalog
+from threatmodeler.domain.control_catalogs.asvs_compact_index import AsvsCompactIndexBuilder
+from threatmodeler.domain.control_catalogs.asvs_control_registry import AsvsControlRegistry
+from threatmodeler.infrastructure.control_catalogs.asvs_control_registry_factory import (
+    AsvsControlRegistryFactory,
+)
+from threatmodeler.ports.asvs_semantic_ranker import AsvsSemanticRanker
 from threatmodeler.shared.constants import ControlFrameworkName
 
 
 class ControlMappingService:
-    """Map validated requirements to curated OWASP ASVS control identifiers."""
+    """Map validated requirements to ranked OWASP ASVS 5.0 controls."""
 
     def __init__(
         self,
         metadata: ArtifactMetadataService,
-        catalog: OwaspAsvsCatalog | None = None,
+        ranker: AsvsSemanticRanker,
+        registry: AsvsControlRegistry | None = None,
+        *,
+        registry_factory: AsvsControlRegistryFactory | None = None,
+        compact_index_builder: AsvsCompactIndexBuilder | None = None,
     ) -> None:
         self._metadata = metadata
-        self._catalog = catalog or OwaspAsvsCatalog.load_default()
+        self._ranker = ranker
+        self._registry = registry or (registry_factory or AsvsControlRegistryFactory.packaged()).create()
+        builder = compact_index_builder or AsvsCompactIndexBuilder()
+        self._compact_index = builder.build(self._registry.snapshot)
 
     def generate(
         self,
@@ -51,15 +64,36 @@ class ControlMappingService:
             for mitigation in mitigations.mitigations
             for threat_id in mitigation.threat_ids
         }
+        needs = tuple(
+            RequirementMappingNeed(
+                requirement_id=requirement.id,
+                implementation_need=" ".join(
+                    part
+                    for part in (
+                        requirement.name,
+                        requirement.statement,
+                        requirement.description,
+                    )
+                    if part
+                ),
+                category=requirement.category.value,
+            )
+            for requirement in requirements.requirements
+        )
+        ranked_by_requirement = {
+            mapping.requirement_id: mapping
+            for mapping in self._ranker.rank_all(
+                needs,
+                self._compact_index,
+            ).mappings
+        }
         controls = []
         for requirement in requirements.requirements:
-            control = self._catalog.match(
-                " ".join([requirement.name, requirement.statement, requirement.description]),
-                requirement.category,
-            )
-            fallback_assumption = (
-                f"Mapped to {control.id} because no stronger keyword match was found "
-                "in the curated OWASP ASVS catalog."
+            ranked = ranked_by_requirement[requirement.id]
+            primary = ranked.candidates[0]
+            mapping_assumption = (
+                f"Mapped to {primary.id} from LLM-ranked ASVS 5.0 candidates "
+                f"for requirement {requirement.id}."
             )
             controls.append(
                 ControlMappingEntry(
@@ -69,10 +103,10 @@ class ControlMappingService:
                         requirement.statement,
                         requirement.evidence,
                         requirement.confidence,
-                        [*model.assumptions, *requirement.assumptions, fallback_assumption],
+                        [*model.assumptions, *requirement.assumptions, mapping_assumption],
                     ).model_dump(),
                     framework=ControlFrameworkName.OWASP_ASVS,
-                    framework_control_id=control.id,
+                    framework_control_id=primary.id,
                     threat_ids=requirement.threat_ids,
                     risk_ids=[
                         risk_ids_by_threat[threat_id]
@@ -95,8 +129,7 @@ class ControlMappingService:
             **self._metadata.artifact_fields(
                 "control-mapping",
                 "Control Mapping",
-                "Mappings between requirements, threats, risks, and OWASP ASVS controls. "
-                "The catalog is a curated ASVS 4.0 subset, not the complete standard.",
+                "Mappings between requirements, threats, risks, and OWASP ASVS 5.0 controls.",
                 model.assumptions,
                 confidence=self._metadata.compute_confidence(
                     controls, when_empty=requirements.confidence

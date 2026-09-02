@@ -52,6 +52,8 @@ def create_mock_agent_provider(
             payload = _canonical_system_model_payload(request)
         elif request.task_name == "generate_stride_threats":
             payload = _stride_threat_register_payload(request)
+        elif request.task_name == "rank_asvs_control_candidates":
+            payload = _rank_asvs_control_candidates_payload(request)
         else:
             payload = dict(request.input_payload)
         return AgentResponse(
@@ -155,6 +157,7 @@ def create_mock_agent_provider_for_agent_assisted(
         if configured is not None or request.task_name in {
             "extract_canonical_system_model",
             "generate_stride_threats",
+            "rank_asvs_control_candidates",
         }:
             return original_complete(request)
         payload = _downstream_artifact_payload(request)
@@ -170,10 +173,41 @@ def create_mock_agent_provider_for_agent_assisted(
     return provider
 
 
+def _rank_asvs_control_candidates_payload(request: AgentRequest) -> dict[str, JsonValue]:
+    requirements = request.input_payload.get("security_requirements")
+    control_index = request.input_payload.get("control_index")
+    if not isinstance(requirements, list) or not requirements:
+        return {"mappings": []}
+    default_control_id = "v5.0.0-1.1.1"
+    if isinstance(control_index, list) and control_index:
+        first_control = control_index[0]
+        if isinstance(first_control, dict):
+            control_id = first_control.get("id")
+            if isinstance(control_id, str):
+                default_control_id = control_id
+    mappings: list[dict[str, JsonValue]] = []
+    for requirement in requirements:
+        if not isinstance(requirement, dict):
+            continue
+        requirement_id = requirement.get("requirement_id")
+        if not isinstance(requirement_id, str):
+            continue
+        mappings.append(
+            {
+                "requirement_id": requirement_id,
+                "control_id": default_control_id,
+                "alternates": [],
+                "confidence": "high",
+                "rationale": "Mock ASVS batch ranker selected a catalog control.",
+            }
+        )
+    return {"mappings": mappings}
+
+
 def _downstream_artifact_payload(request: AgentRequest) -> dict[str, JsonValue]:
     from threatmodeler.domain.artifact_metadata import ArtifactMetadataService
     from threatmodeler.domain.attack_tree_generation import AttackTreeGenerationService
-    from threatmodeler.domain.control_mapping import ControlMappingService
+    from tests.fixtures.mock_asvs_semantic_ranker import create_mock_control_mapping_service
     from threatmodeler.domain.dfd_generation import DfdGenerationService
     from threatmodeler.domain.mitigation_generation import MitigationGenerationService
     from threatmodeler.domain.report_generation import ReportGenerationService
@@ -240,7 +274,7 @@ def _downstream_artifact_payload(request: AgentRequest) -> dict[str, JsonValue]:
         "generate_missing_information": lambda: ReportGenerationService(
             metadata
         ).generate_missing_information(model),
-        "generate_control_mapping": lambda: ControlMappingService(metadata).generate(
+        "generate_control_mapping": lambda: create_mock_control_mapping_service(metadata).generate(
             model, risks, mitigations, requirements
         ),
         "generate_executive_summary": lambda: ReportGenerationService(

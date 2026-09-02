@@ -1,7 +1,10 @@
-"""Business validation for generated control mappings."""
+"""Validate generated control mappings against the ASVS 5.0 registry."""
 
 from threatmodeler.contracts.artifacts import ControlMapping
-from threatmodeler.domain.control_catalogs.owasp_asvs import OwaspAsvsCatalog
+from threatmodeler.domain.control_catalogs.asvs_control_registry import AsvsControlRegistry
+from threatmodeler.infrastructure.control_catalogs.asvs_control_registry_factory import (
+    AsvsControlRegistryFactory,
+)
 from threatmodeler.errors.application import AgentSchemaValidationError
 from threatmodeler.shared.constants import ControlFrameworkName
 
@@ -9,8 +12,13 @@ from threatmodeler.shared.constants import ControlFrameworkName
 class ControlMappingCatalogRule:
     """Require agent control mappings to use catalogued OWASP ASVS identifiers."""
 
-    def __init__(self, catalog: OwaspAsvsCatalog | None = None) -> None:
-        self._catalog = catalog or OwaspAsvsCatalog.load_default()
+    def __init__(
+        self,
+        registry: AsvsControlRegistry | None = None,
+        *,
+        registry_factory: AsvsControlRegistryFactory | None = None,
+    ) -> None:
+        self._registry = registry or (registry_factory or AsvsControlRegistryFactory.packaged()).create()
 
     def validate(self, mapping: ControlMapping) -> ControlMapping:
         """Reject mappings that invent framework identifiers.
@@ -30,7 +38,7 @@ class ControlMappingCatalogRule:
                 violations.append(
                     f"Control {entry.id} uses unsupported framework {entry.framework}"
                 )
-            if not self._catalog.contains(entry.framework_control_id):
+            if not self._registry.contains(entry.framework_control_id):
                 violations.append(
                     f"Control {entry.id} uses unknown ASVS id {entry.framework_control_id}"
                 )

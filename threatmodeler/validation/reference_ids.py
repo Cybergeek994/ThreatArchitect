@@ -23,6 +23,9 @@ from threatmodeler.contracts.artifacts.inventories import ActorModel, AssetInven
 from threatmodeler.contracts.system_model import CanonicalSystemModel
 from threatmodeler.contracts.schema_introspection import reference_fields_for_models
 
+# Catalog and metadata identifiers ending in ``_id`` are not cross-artifact references.
+_NON_ARTIFACT_REFERENCE_FIELDS = frozenset({"framework_control_id"})
+
 _REFERENCE_MODELS: tuple[type[BaseModel], ...] = (
     CanonicalSystemModel,
     ThreatLinkedItem,
@@ -40,7 +43,7 @@ _REFERENCE_MODELS: tuple[type[BaseModel], ...] = (
     AssetInventory,
 )
 
-_REFERENCE_FIELDS = reference_fields_for_models(*_REFERENCE_MODELS)
+_REFERENCE_FIELDS = reference_fields_for_models(*_REFERENCE_MODELS) - _NON_ARTIFACT_REFERENCE_FIELDS
 
 
 def collect_known_ids(payload: JsonValue) -> set[str]:

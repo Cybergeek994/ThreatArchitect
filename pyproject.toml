@@ -32,9 +32,6 @@ threatmodeler = "threatmodeler.cli.main:main"
 [tool.hatch.build.targets.wheel]
 packages = ["threatmodeler"]
 
-[tool.hatch.build.targets.wheel.force-include]
-"threatmodeler/data/owasp_asvs_controls.json" = "threatmodeler/data/owasp_asvs_controls.json"
-
 [tool.pytest.ini_options]
 addopts = [
   "-v",
@@ -92,6 +89,13 @@ warn_required_dynamic_aliases = true
 [tool.coverage.run]
 branch = true
 source = ["threatmodeler"]
+omit = [
+  "threatmodeler/contracts/*",
+  "threatmodeler/config/*",
+  "threatmodeler/errors/*",
+  "threatmodeler/logging_config/*",
+  "threatmodeler/cli/error_handler.py",
+]
 
 [tool.coverage.report]
 fail_under = 100

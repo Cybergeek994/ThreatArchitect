@@ -281,3 +281,18 @@ class TestReportGenerationPositive:
             section.title != "Verify Phase and Completeness Check"
             for section in cleaned.sections
         )
+
+    def test_verify_completeness_helper_matches_artifact_id(self) -> None:
+        from threatmodeler.domain.report_generation import _is_verify_completeness_section
+
+        section = TechnicalReportSection.model_construct(
+            artifact_id="technical-report-completeness",
+            title="Other title",
+            description="Completeness",
+            confidence=1.0,
+            assumptions=[],
+            content="Checklist",
+            referenced_artifact_ids=[],
+        )
+
+        assert _is_verify_completeness_section(section) is True

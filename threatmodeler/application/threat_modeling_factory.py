@@ -1,9 +1,12 @@
-"""Factory for constructing the threat-modeling application facade."""
+"""Application factory for constructing the threat-modeling application facade."""
 
 from threatmodeler.application.threat_modeling_service import ThreatModelingService
 from threatmodeler.config.settings import Settings
 from threatmodeler.domain.artifact_metadata import ArtifactMetadataService
-from threatmodeler.domain.control_catalogs.owasp_asvs import OwaspAsvsCatalog
+from threatmodeler.domain.control_catalogs.control_mapping_candidate_service import (
+    ControlMappingCandidateService,
+)
+from threatmodeler.domain.control_catalogs.llm_asvs_semantic_ranker import LlmAsvsSemanticRanker
 from threatmodeler.domain.downstream_artifact_generation import (
     AgentDownstreamArtifactGenerationStrategy,
     DownstreamArtifactGenerationStrategy,
@@ -16,12 +19,16 @@ from threatmodeler.domain.stride_generation import (
     AgentStrideThreatGenerationStrategy,
     StrideThreatGenerationService,
 )
+from threatmodeler.infrastructure.control_catalogs.asvs_control_registry_factory import (
+    AsvsControlRegistryFactory,
+)
 from threatmodeler.orchestration.prompts import (
     SchemaRepairPromptBuilder,
     SecurePromptTemplate,
     StrideThreatPromptBuilder,
 )
 from threatmodeler.orchestration.prompts.registry import ArtifactPromptBuilderFactory
+from threatmodeler.ports.agent_provider import AgentProvider
 from threatmodeler.ports.artifact_validator import ArtifactValidator
 from threatmodeler.ports.schema_provider import SchemaProvider
 from threatmodeler.ports.tool_calling_provider import ToolCallingProvider
@@ -38,14 +45,18 @@ class ThreatModelingServiceFactory:
         secure_prompt_template: SecurePromptTemplate,
         repair_prompt_builder: SchemaRepairPromptBuilder,
         tool_calling_provider: ToolCallingProvider,
+        agent_provider: AgentProvider,
         artifact_validator: ArtifactValidator | None = None,
+        candidate_service: ControlMappingCandidateService | None = None,
     ) -> None:
         self._settings = settings
         self._schema_provider = schema_provider
         self._secure_prompt_template = secure_prompt_template
         self._repair_prompt_builder = repair_prompt_builder
         self._tool_calling_provider = tool_calling_provider
+        self._agent_provider = agent_provider
         self._artifact_validator = artifact_validator
+        self._candidate_service = candidate_service
 
     def create(self) -> ThreatModelingService:
         """Create a fully composed threat-modeling facade.
@@ -85,6 +96,16 @@ class ThreatModelingServiceFactory:
         )
 
     def _create_downstream_strategy(self) -> DownstreamArtifactGenerationStrategy:
+        registry_factory = AsvsControlRegistryFactory.from_settings(self._settings)
+        registry = registry_factory.create()
+        candidate_service = self._candidate_service or ControlMappingCandidateService(
+            registry,
+            LlmAsvsSemanticRanker(
+                self._agent_provider,
+                registry,
+                max_attempts=self._settings.agent_provider_max_attempts,
+            ),
+        )
         return AgentDownstreamArtifactGenerationStrategy(
             tool_calling_provider=self._tool_calling_provider,
             prompt_registry=ArtifactPromptBuilderFactory(
@@ -92,6 +113,7 @@ class ThreatModelingServiceFactory:
                 self._schema_provider,
             ).create(),
             schema_provider=self._schema_provider,
-            control_catalog=OwaspAsvsCatalog.load_default(),
+            candidate_service=candidate_service,
+            control_registry=registry,
             max_attempts=self._settings.agent_provider_max_attempts,
         )

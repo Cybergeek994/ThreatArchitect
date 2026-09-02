@@ -30,6 +30,7 @@ def threat_modeling_service_factory_under_test() -> ThreatModelingServiceFactory
         secure_prompt_template=template,
         repair_prompt_builder=SchemaRepairPromptBuilder(template),
         tool_calling_provider=create_mock_agent_provider_for_agent_assisted(),
+        agent_provider=create_mock_agent_provider_for_agent_assisted(),
     )
 
 
@@ -43,6 +44,7 @@ def blocking_threat_modeling_factory() -> ThreatModelingServiceFactory:
         secure_prompt_template=template,
         repair_prompt_builder=SchemaRepairPromptBuilder(template),
         tool_calling_provider=create_mock_agent_provider_for_agent_assisted(),
+        agent_provider=create_mock_agent_provider_for_agent_assisted(),
     )
 
 
@@ -76,6 +78,7 @@ class TestThreatModelingServiceFactoryPositive:
             secure_prompt_template=template,
             repair_prompt_builder=SchemaRepairPromptBuilder(template),
             tool_calling_provider=create_mock_agent_provider_for_agent_assisted(),
+            agent_provider=create_mock_agent_provider_for_agent_assisted(),
             artifact_validator=validator,
         )
 

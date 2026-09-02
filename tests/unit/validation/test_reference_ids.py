@@ -63,6 +63,20 @@ class TestKnownIdReferenceCheckerNegative:
         assert "actor_id" in fields
         assert "threat_ids" in fields
 
+    def test_framework_control_id_is_not_validated_as_artifact_reference(self) -> None:
+        checker = KnownIdReferenceChecker({"req-auth"})
+        violations = checker(
+            "controls",
+            {
+                "id": "control-1",
+                "framework_control_id": "v5.0.0-10.3.5",
+                "requirement_ids": ["req-auth"],
+            },
+            {"controls": []},
+        )
+
+        assert violations == []
+
     def test_unknown_top_risk_id_is_rejected(self) -> None:
         checker = KnownIdReferenceChecker({"risk-1"})
         violations = checker(

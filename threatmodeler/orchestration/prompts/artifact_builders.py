@@ -446,8 +446,10 @@ class ControlMappingPromptBuilder(_SchemaBoundArtifactPromptBuilder):
             output_model=ControlMapping,
             objective="Map validated findings and requirements to supplied control references.",
             constraints=(
-                "Map only to supplied OWASP ASVS control IDs; use framework value "
+                "Map only to pre-ranked OWASP ASVS 5.0 control ids in "
+                "ranked_candidates_by_requirement; use framework value "
                 f"'{ControlFrameworkName.OWASP_ASVS}'.",
+                "Prefer rank #1 for each requirement; use alternates only when rationale clearly favors them.",
                 "Do not invent framework identifiers or implementation status.",
                 "Preserve all supplied requirement, threat, and risk links.",
             ),

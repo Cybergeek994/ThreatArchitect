@@ -43,6 +43,7 @@ class SchemaBoundToolCallingCompleter:
         source_text: str = "",
         finish_validator: FinishValidator | None = None,
         item_validator: ItemValidator | None = None,
+        session_factory: ArtifactConstructionSessionFactory | None = None,
     ) -> AgentResponse:
         """Assemble one schema-bound artifact through construction tools.
 
@@ -53,6 +54,7 @@ class SchemaBoundToolCallingCompleter:
             source_text: Corpus used for deterministic evidence grounding.
             finish_validator: Optional extra checks applied inside the finish tool.
             item_validator: Optional per-item checks applied before each add_* call.
+            session_factory: Optional session factory override for this attempt.
 
         Returns:
             Provider response whose payload is the assembled artifact.
@@ -61,8 +63,9 @@ class SchemaBoundToolCallingCompleter:
             AgentProviderError: If the provider fails after retries.
         """
         last_error: AgentProviderError | None = None
+        factory = session_factory or self._session_factory
         for _attempt in range(self._max_attempts):
-            session = self._session_factory.create(
+            session = factory.create(
                 output_model,
                 source_text=source_text,
                 finish_validator=finish_validator,
