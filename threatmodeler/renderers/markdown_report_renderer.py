@@ -13,6 +13,7 @@ from threatmodeler.renderers.markdown_section_formatter import (
     DefaultMarkdownSectionFormatter,
     MarkdownSectionFormatter,
 )
+from threatmodeler.renderers.mitigation_by_threat_index import MitigationByThreatIndex
 
 
 class MarkdownReportRenderer:
@@ -152,7 +153,10 @@ class MarkdownReportRenderer:
             "",
             "## Detailed Threats",
             "",
-            formatter.format_threats_table(bundle.stride_threat_register),
+            formatter.format_threat_dossiers(
+                bundle.stride_threat_register,
+                MitigationByThreatIndex(bundle.mitigation_plan),
+            ),
             "",
             "## Risk Register Details",
             "",

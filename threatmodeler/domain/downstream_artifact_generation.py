@@ -6,6 +6,7 @@ from pydantic import BaseModel, JsonValue
 
 from threatmodeler.contracts.artifacts import (
     AbuseMisuseCases,
+    ArchitectureGraph,
     AttackTree,
     ControlMapping,
     DataFlowDiagramModel,
@@ -17,8 +18,10 @@ from threatmodeler.contracts.artifacts import (
     StrideThreatRegister,
     TechnicalThreatModelReport,
 )
+from threatmodeler.contracts.artifacts.stride_context import PreStrideArtifacts
 from threatmodeler.contracts.system_model import CanonicalSystemModel
 from threatmodeler.domain.agent_schema_bound_generator import AgentSchemaBoundArtifactGenerator
+from threatmodeler.domain.architecture_graph_generation import ArchitectureGraphGenerationService
 from threatmodeler.domain.attack_tree_generation import AttackTreeGenerationService
 from threatmodeler.domain.control_catalogs.control_mapping_candidate_service import (
     ControlMappingCandidateService,
@@ -29,6 +32,7 @@ from threatmodeler.domain.dfd_generation import DfdGenerationService
 from threatmodeler.domain.mitigation_generation import MitigationGenerationService
 from threatmodeler.domain.report_generation import ReportGenerationService
 from threatmodeler.domain.risk_scoring import RiskScoringService
+from threatmodeler.domain.stride_input_payload_builder import StrideInputPayloadBuilder
 from threatmodeler.domain.stride_generation import StrideThreatGenerationService
 from threatmodeler.ports.artifact_prompt_builder_registry import ArtifactPromptBuilderRegistry
 from threatmodeler.ports.construction_journal import ConstructionJournal
@@ -36,7 +40,8 @@ from threatmodeler.ports.prompt_builder import PromptBuilder
 from threatmodeler.ports.schema_provider import SchemaProvider
 from threatmodeler.ports.tool_calling_provider import ToolCallingProvider
 from threatmodeler.shared.constants import ControlFrameworkName
-from threatmodeler.ports.artifact_construction_session_factory import ItemValidator
+from threatmodeler.ports.artifact_construction_session_factory import FinishValidator, ItemValidator
+from threatmodeler.validation.architecture_graph_validator import ArchitectureGraphValidatorFactory
 from threatmodeler.validation.control_mapping_candidate_validator import (
     build_candidate_membership_validator,
 )
@@ -48,6 +53,13 @@ class DownstreamArtifactGenerationStrategy(Protocol):
 
     def generate_dfd(self, model: CanonicalSystemModel) -> DataFlowDiagramModel:
         """Generate a machine-readable data-flow diagram."""
+        ...
+
+    def generate_architecture_graph(
+        self,
+        upstream: PreStrideArtifacts,
+    ) -> ArchitectureGraph:
+        """Generate a typed architecture graph from validated upstream artifacts."""
         ...
 
     def generate_attack_tree(
@@ -133,6 +145,7 @@ class DeterministicDownstreamArtifactGenerationStrategy:
     def __init__(
         self,
         dfd_service: DfdGenerationService,
+        architecture_graph_service: ArchitectureGraphGenerationService,
         attack_tree_service: AttackTreeGenerationService,
         stride_service: StrideThreatGenerationService,
         risk_service: RiskScoringService,
@@ -141,6 +154,7 @@ class DeterministicDownstreamArtifactGenerationStrategy:
         report_service: ReportGenerationService,
     ) -> None:
         self._dfd_service = dfd_service
+        self._architecture_graph_service = architecture_graph_service
         self._attack_tree_service = attack_tree_service
         self._stride_service = stride_service
         self._risk_service = risk_service
@@ -151,6 +165,13 @@ class DeterministicDownstreamArtifactGenerationStrategy:
     def generate_dfd(self, model: CanonicalSystemModel) -> DataFlowDiagramModel:
         """Generate a machine-readable data-flow diagram."""
         return self._dfd_service.generate(model)
+
+    def generate_architecture_graph(
+        self,
+        upstream: PreStrideArtifacts,
+    ) -> ArchitectureGraph:
+        """Generate a typed architecture graph from the canonical model."""
+        return self._architecture_graph_service.generate(upstream.system_model)
 
     def generate_attack_tree(
         self,
@@ -267,6 +288,8 @@ class AgentDownstreamArtifactGenerationStrategy:
         self._prompt_registry = prompt_registry
         self._candidate_service = candidate_service
         self._control_mapping_rule = ControlMappingCatalogRule(control_registry)
+        self._graph_validator_factory = ArchitectureGraphValidatorFactory()
+        self._payload_builder = StrideInputPayloadBuilder()
 
     def bind_journal(self, journal: ConstructionJournal | None) -> None:
         """Bind the per-run construction journal onto the shared generator."""
@@ -279,6 +302,21 @@ class AgentDownstreamArtifactGenerationStrategy:
             output_model=DataFlowDiagramModel,
             prompt_builder=self._prompt_registry.dfd,
             input_payload={"system_model": self._generator.serialize(model)},
+        )
+
+    def generate_architecture_graph(
+        self,
+        upstream: PreStrideArtifacts,
+    ) -> ArchitectureGraph:
+        """Generate a typed architecture graph through the agent provider."""
+        graph_validator = self._graph_validator_factory
+        return self._generate(
+            task_name="generate_architecture_graph",
+            output_model=ArchitectureGraph,
+            prompt_builder=self._prompt_registry.architecture_graph,
+            input_payload=self._payload_builder.build_graph_input(upstream),
+            item_validator=graph_validator.build_item_validator(),
+            finish_validator=graph_validator.build_finish_validator(),
         )
 
     def generate_attack_tree(
@@ -453,6 +491,7 @@ class AgentDownstreamArtifactGenerationStrategy:
         prompt_builder: PromptBuilder,
         input_payload: dict[str, JsonValue],
         item_validator: ItemValidator | None = None,
+        finish_validator: FinishValidator | None = None,
     ) -> T:
         return self._generator.generate(
             task_name=task_name,
@@ -460,4 +499,5 @@ class AgentDownstreamArtifactGenerationStrategy:
             prompt_builder=prompt_builder,
             input_payload=input_payload,
             item_validator=item_validator,
+            finish_validator=finish_validator,
         )

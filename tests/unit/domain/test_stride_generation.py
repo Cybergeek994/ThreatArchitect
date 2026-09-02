@@ -11,6 +11,7 @@ from threatmodeler.domain.stride_generation import (
 from threatmodeler.orchestration.prompts import SecurePromptTemplate, StrideThreatPromptBuilder
 from threatmodeler.validation.pydantic_schema_provider import PydanticSchemaProvider
 
+from tests.fixtures.graph_fixtures import stride_upstream_context_for_model
 from tests.fixtures.mock_agent_provider import create_mock_agent_provider
 
 
@@ -32,8 +33,9 @@ class TestAgentStrideThreatGenerationPositive:
             ),
             ArtifactMetadataService(),
         )
+        context = stride_upstream_context_for_model(model)
 
-        register = service.generate(model)
+        register = service.generate(context)
 
         request = provider.complete.call_args.args[0]
         assert register.threats

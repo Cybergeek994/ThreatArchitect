@@ -15,6 +15,10 @@ from threatmodeler.domain.threat_model_completeness import ThreatModelCompletene
 from threatmodeler.orchestration.prompts import SecurePromptTemplate, StrideThreatPromptBuilder
 from threatmodeler.validation.pydantic_schema_provider import PydanticSchemaProvider
 
+from tests.fixtures.graph_fixtures import (
+    architecture_graph_for_model,
+    stride_upstream_context_for_model,
+)
 from tests.fixtures.mock_agent_provider import create_mock_agent_provider
 
 
@@ -57,7 +61,7 @@ class TestReportGenerationPositive:
             ),
             metadata,
         )
-        threats = stride_service.generate(canonical_system_model)
+        threats = stride_service.generate(stride_upstream_context_for_model(canonical_system_model))
         risks = RiskScoringService(metadata).generate(canonical_system_model, threats)
         mitigations = MitigationGenerationService(metadata).generate_plan(
             canonical_system_model,
@@ -91,7 +95,7 @@ class TestReportGenerationPositive:
             ),
             metadata,
         )
-        threats = stride_service.generate(canonical_system_model)
+        threats = stride_service.generate(stride_upstream_context_for_model(canonical_system_model))
         risks = RiskScoringService(metadata).generate(canonical_system_model, threats)
         report_service = ReportGenerationService(metadata)
         base_report = report_service.generate_technical_report(
@@ -108,6 +112,7 @@ class TestReportGenerationPositive:
             ),
             DfdGenerationService(metadata).generate(canonical_system_model),
             report_service.generate_missing_information(canonical_system_model),
+            architecture_graph_for_model(canonical_system_model),
         )
         enriched = report_service.with_completeness_section(
             base_report,
@@ -138,7 +143,7 @@ class TestReportGenerationPositive:
             ),
             metadata,
         )
-        threats = stride_service.generate(canonical_system_model)
+        threats = stride_service.generate(stride_upstream_context_for_model(canonical_system_model))
         risks = RiskScoringService(metadata).generate(canonical_system_model, threats)
         report_service = ReportGenerationService(metadata)
         completeness = ThreatModelCompletenessService(metadata).assess(
@@ -150,6 +155,7 @@ class TestReportGenerationPositive:
             ),
             DfdGenerationService(metadata).generate(canonical_system_model),
             report_service.generate_missing_information(canonical_system_model),
+            architecture_graph_for_model(canonical_system_model),
         )
 
         report = report_service.generate_technical_report(
@@ -176,7 +182,7 @@ class TestReportGenerationPositive:
             ),
             metadata,
         )
-        threats = stride_service.generate(canonical_system_model)
+        threats = stride_service.generate(stride_upstream_context_for_model(canonical_system_model))
         risks = RiskScoringService(metadata).generate(canonical_system_model, threats)
         report_service = ReportGenerationService(metadata)
         base_report = report_service.generate_technical_report(
@@ -207,6 +213,7 @@ class TestReportGenerationPositive:
             ),
             DfdGenerationService(metadata).generate(canonical_system_model),
             report_service.generate_missing_information(canonical_system_model),
+            architecture_graph_for_model(canonical_system_model),
         )
 
         enriched = report_service.with_completeness_section(
@@ -236,7 +243,7 @@ class TestReportGenerationPositive:
             ),
             metadata,
         )
-        threats = stride_service.generate(canonical_system_model)
+        threats = stride_service.generate(stride_upstream_context_for_model(canonical_system_model))
         risks = RiskScoringService(metadata).generate(canonical_system_model, threats)
         report_service = ReportGenerationService(metadata)
         completeness = ThreatModelCompletenessService(metadata).assess(
@@ -248,6 +255,7 @@ class TestReportGenerationPositive:
             ),
             DfdGenerationService(metadata).generate(canonical_system_model),
             report_service.generate_missing_information(canonical_system_model),
+            architecture_graph_for_model(canonical_system_model),
         )
         deterministic = report_service._completeness_section(canonical_system_model, completeness)
         llm_verify_section = TechnicalReportSection(

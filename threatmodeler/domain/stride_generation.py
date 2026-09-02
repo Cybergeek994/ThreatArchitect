@@ -2,7 +2,7 @@
 
 from typing import Protocol
 
-from pydantic import JsonValue, TypeAdapter, ValidationError
+from pydantic import JsonValue, ValidationError
 
 from threatmodeler.contracts import AgentRequest, PromptBuildRequest
 from threatmodeler.contracts.artifacts import (
@@ -10,8 +10,10 @@ from threatmodeler.contracts.artifacts import (
     AbuseMisuseCases,
     StrideThreatRegister,
 )
+from threatmodeler.contracts.artifacts.stride_context import StrideUpstreamContext
 from threatmodeler.contracts.system_model import ActorType, CanonicalSystemModel
 from threatmodeler.domain.artifact_metadata import ArtifactMetadataService
+from threatmodeler.domain.stride_input_payload_builder import StrideInputPayloadBuilder
 from threatmodeler.domain.tool_calling.completer import SchemaBoundToolCallingCompleter
 from threatmodeler.domain.tool_calling.completion import source_text_from_payload
 from threatmodeler.domain.tool_calling.discarding_journal import DiscardingConstructionJournal
@@ -21,17 +23,21 @@ from threatmodeler.ports.construction_journal_receiver import ConstructionJourna
 from threatmodeler.ports.prompt_builder import PromptBuilder
 from threatmodeler.ports.schema_provider import SchemaProvider
 from threatmodeler.ports.tool_calling_provider import ToolCallingProvider
+from threatmodeler.validation.composite_item_validator import CompositeItemValidator
 from threatmodeler.validation.reference_ids import KnownIdReferenceChecker, collect_known_ids
+from threatmodeler.validation.threat_provenance_validator import (
+    ThreatProvenanceValidatorFactory,
+)
 
 
 class StrideThreatGenerationStrategy(Protocol):
     """Define the interchangeable strategy for producing STRIDE registers."""
 
-    def generate(self, model: CanonicalSystemModel) -> StrideThreatRegister:
-        """Generate a validated STRIDE threat register from a canonical model.
+    def generate(self, context: StrideUpstreamContext) -> StrideThreatRegister:
+        """Generate a validated STRIDE threat register from upstream artifacts.
 
         Args:
-            model: Canonical architecture model supplied to the strategy.
+            context: Validated upstream artifacts including architecture graph.
 
         Returns:
             Strategy-specific but schema-valid STRIDE threat register.
@@ -47,6 +53,7 @@ class AgentStrideThreatGenerationStrategy:
         tool_calling_provider: ToolCallingProvider,
         prompt_builder: PromptBuilder,
         schema_provider: SchemaProvider,
+        payload_builder: StrideInputPayloadBuilder | None = None,
         max_attempts: int = 1,
     ) -> None:
         self._completer = SchemaBoundToolCallingCompleter(
@@ -55,17 +62,18 @@ class AgentStrideThreatGenerationStrategy:
         )
         self._prompt_builder = prompt_builder
         self._schema_provider = schema_provider
+        self._payload_builder = payload_builder or StrideInputPayloadBuilder()
         self._journal: ConstructionJournal | None = None
 
     def bind_journal(self, journal: ConstructionJournal | None) -> None:
         """Bind the per-run construction journal."""
         self._journal = journal
 
-    def generate(self, model: CanonicalSystemModel) -> StrideThreatRegister:
+    def generate(self, context: StrideUpstreamContext) -> StrideThreatRegister:
         """Request and validate a structured STRIDE threat register.
 
         Args:
-            model: Canonical model serialized into the provider request.
+            context: Validated upstream artifacts serialized into the provider request.
 
         Returns:
             Schema-valid STRIDE threat register produced by the provider.
@@ -73,14 +81,7 @@ class AgentStrideThreatGenerationStrategy:
         Raises:
             AgentSchemaValidationError: If provider output violates the register schema.
         """
-        system_model = TypeAdapter(dict[str, JsonValue]).validate_json(model.model_dump_json())
-        input_payload: dict[str, JsonValue] = {
-            "system_model": system_model,
-            "diagram_evidence": list(model.diagram_evidence),
-            "diagram_topology": [
-                snapshot.model_dump(mode="json") for snapshot in model.diagram_topology
-            ],
-        }
+        input_payload = self._payload_builder.build(context)
         prompt = self._prompt_builder.build(
             PromptBuildRequest(
                 task_name="generate_stride_threats",
@@ -103,7 +104,10 @@ class AgentStrideThreatGenerationStrategy:
             StrideThreatRegister,
             self._journal or DiscardingConstructionJournal(),
             source_text=source_text_from_payload(input_payload),
-            item_validator=KnownIdReferenceChecker(collect_known_ids(input_payload)),
+            item_validator=CompositeItemValidator.of(
+                KnownIdReferenceChecker(collect_known_ids(input_payload)),
+                ThreatProvenanceValidatorFactory.from_input_payload(input_payload).build(),
+            ),
         )
         try:
             return StrideThreatRegister.model_validate(response.output_payload)
@@ -137,16 +141,16 @@ class StrideThreatGenerationService:
         if isinstance(self._strategy, ConstructionJournalReceiver):
             self._strategy.bind_journal(journal)
 
-    def generate(self, model: CanonicalSystemModel) -> StrideThreatRegister:
+    def generate(self, context: StrideUpstreamContext) -> StrideThreatRegister:
         """Generate STRIDE threats using the selected strategy.
 
         Args:
-            model: Canonical architecture model supplied to the strategy.
+            context: Validated upstream artifacts including architecture graph.
 
         Returns:
             Validated STRIDE threat register returned by the strategy.
         """
-        return self._strategy.generate(model)
+        return self._strategy.generate(context)
 
     def generate_abuse_cases(
         self,

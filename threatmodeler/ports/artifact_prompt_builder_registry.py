@@ -14,6 +14,7 @@ class ArtifactPromptBuilderRegistry(BaseModel):
 
     missing_information: Annotated[PromptBuilder, SkipValidation()]
     dfd: Annotated[PromptBuilder, SkipValidation()]
+    architecture_graph: Annotated[PromptBuilder, SkipValidation()]
     attack_tree: Annotated[PromptBuilder, SkipValidation()]
     abuse_cases: Annotated[PromptBuilder, SkipValidation()]
     risk_register: Annotated[PromptBuilder, SkipValidation()]

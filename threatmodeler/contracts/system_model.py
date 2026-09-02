@@ -113,6 +113,10 @@ class ExposureType(StrEnum):
     PARTNER = "partner"
     UNKNOWN = "unknown"
 
+    def is_external_facing(self) -> bool:
+        """Return whether threats must cover this exposure via entry-point provenance."""
+        return self is ExposureType.EXTERNAL or self is ExposureType.PARTNER
+
 
 class DeploymentType(StrEnum):
     """Supported high-level deployment models."""

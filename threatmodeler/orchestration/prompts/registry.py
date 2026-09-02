@@ -1,6 +1,7 @@
 """Production registry and factory for schema-bound artifact prompt builders."""
 
 from threatmodeler.orchestration.prompts.artifact_builders import (
+    ArchitectureGraphPromptBuilder,
     AbuseCasePromptBuilder,
     AttackTreePromptBuilder,
     ControlMappingPromptBuilder,
@@ -40,6 +41,10 @@ class ArtifactPromptBuilderFactory:
                 self._schema_provider,
             ),
             dfd=DfdPromptBuilder(self._secure_template, self._schema_provider),
+            architecture_graph=ArchitectureGraphPromptBuilder(
+                self._secure_template,
+                self._schema_provider,
+            ),
             attack_tree=AttackTreePromptBuilder(self._secure_template, self._schema_provider),
             abuse_cases=AbuseCasePromptBuilder(self._secure_template, self._schema_provider),
             risk_register=RiskRegisterPromptBuilder(self._secure_template, self._schema_provider),

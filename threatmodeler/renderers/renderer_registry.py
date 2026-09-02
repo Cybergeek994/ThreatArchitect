@@ -8,6 +8,9 @@ from threatmodeler.ports.artifact_renderer import ArtifactRenderer
 from threatmodeler.renderers.flow_diagram_renderer import FlowDiagramRenderer
 from threatmodeler.renderers.json_artifact_renderer import JsonArtifactRenderer
 from threatmodeler.renderers.markdown_report_renderer import MarkdownReportRenderer
+from threatmodeler.renderers.mermaid_architecture_graph_renderer import (
+    MermaidArchitectureGraphRenderer,
+)
 from threatmodeler.renderers.mermaid_attack_tree_renderer import MermaidAttackTreeRenderer
 from threatmodeler.renderers.mermaid_dfd_renderer import MermaidDfdRenderer
 from threatmodeler.renderers.mermaid_trust_boundary_renderer import MermaidTrustBoundaryRenderer
@@ -34,6 +37,11 @@ DEFAULT_RENDERER_ENTRIES: tuple[RendererRegistryEntry, ...] = (
         output_format=OutputFormat.MERMAID,
         artifact_kind=ArtifactKind.DFD,
         factory=MermaidDfdRenderer,
+    ),
+    RendererRegistryEntry(
+        output_format=OutputFormat.MERMAID,
+        artifact_kind=ArtifactKind.ARCHITECTURE_GRAPH,
+        factory=MermaidArchitectureGraphRenderer,
     ),
     RendererRegistryEntry(
         output_format=OutputFormat.MERMAID,

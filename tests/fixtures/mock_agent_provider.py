@@ -7,16 +7,21 @@ from unittest.mock import Mock
 
 from pydantic import BaseModel, JsonValue
 from threatmodeler.contracts.artifacts import (
+    ArchitectureGraph,
     MitigationPlan,
     RiskRegister,
     SecurityRequirements,
     StrideCategory,
     StrideThreat,
     StrideThreatRegister,
+    ThreatProvenance,
     ThreatStatus,
 )
 from threatmodeler.contracts.integration import AgentRequest, AgentResponse
 from threatmodeler.contracts.source import Evidence, SourceReference
+from threatmodeler.contracts.artifacts.enums import StrideInputPayloadField
+from threatmodeler.domain.architecture_graph_generation import ArchitectureGraphGenerationService
+from threatmodeler.domain.artifact_metadata import ArtifactMetadataService
 from threatmodeler.contracts.system_model import (
     ApplicationInfo,
     CanonicalSystemModel,
@@ -50,6 +55,8 @@ def create_mock_agent_provider(
             payload = dict(configured_payload)
         elif request.task_name == "extract_canonical_system_model":
             payload = _canonical_system_model_payload(request)
+        elif request.task_name == "generate_architecture_graph":
+            payload = _architecture_graph_payload(request)
         elif request.task_name == "generate_stride_threats":
             payload = _stride_threat_register_payload(request)
         elif request.task_name == "rank_asvs_control_candidates":
@@ -156,6 +163,7 @@ def create_mock_agent_provider_for_agent_assisted(
         configured = (responses or {}).get(request.task_name)
         if configured is not None or request.task_name in {
             "extract_canonical_system_model",
+            "generate_architecture_graph",
             "generate_stride_threats",
             "rank_asvs_control_candidates",
         }:
@@ -205,6 +213,7 @@ def _rank_asvs_control_candidates_payload(request: AgentRequest) -> dict[str, Js
 
 
 def _downstream_artifact_payload(request: AgentRequest) -> dict[str, JsonValue]:
+    from threatmodeler.domain.architecture_graph_generation import ArchitectureGraphGenerationService
     from threatmodeler.domain.artifact_metadata import ArtifactMetadataService
     from threatmodeler.domain.attack_tree_generation import AttackTreeGenerationService
     from tests.fixtures.mock_asvs_semantic_ranker import create_mock_control_mapping_service
@@ -257,6 +266,9 @@ def _downstream_artifact_payload(request: AgentRequest) -> dict[str, JsonValue]:
     )
     generators: dict[str, Callable[[], BaseModel]] = {
         "generate_dfd": lambda: DfdGenerationService(metadata).generate(model),
+        "generate_architecture_graph": lambda: ArchitectureGraphGenerationService(
+            metadata
+        ).generate(model),
         "generate_attack_tree": lambda: AttackTreeGenerationService(metadata).generate(
             model, threats
         ),
@@ -406,30 +418,82 @@ def _canonical_system_model_payload(request: AgentRequest) -> dict[str, JsonValu
     return model.model_dump(mode="json")
 
 
-def _stride_threat_register_payload(request: AgentRequest) -> dict[str, JsonValue]:
-    system_model_payload = request.input_payload.get("system_model")
+def _architecture_graph_payload(request: AgentRequest) -> dict[str, JsonValue]:
+    system_model_payload = request.input_payload.get(StrideInputPayloadField.SYSTEM_MODEL)
     if not isinstance(system_model_payload, dict):
         return {}
     model = CanonicalSystemModel.model_validate(system_model_payload)
-    threats = [
-        StrideThreat(
-            id=f"threat-{component.id}",
-            name=f"{_stride_category(component.component_type).value} at {component.name}",
-            description=(
-                f"The {component.name} component may be exposed to "
-                f"{_stride_category(component.component_type).value}."
+    graph = ArchitectureGraphGenerationService(ArtifactMetadataService()).generate(model)
+    return graph.model_dump(mode="json")
+
+
+def _stride_threat_register_payload(request: AgentRequest) -> dict[str, JsonValue]:
+    system_model_payload = request.input_payload.get(StrideInputPayloadField.SYSTEM_MODEL)
+    graph_payload = request.input_payload.get(StrideInputPayloadField.ARCHITECTURE_GRAPH)
+    if not isinstance(system_model_payload, dict) or not isinstance(graph_payload, dict):
+        return {}
+    model = CanonicalSystemModel.model_validate(system_model_payload)
+    graph = ArchitectureGraph.model_validate(graph_payload)
+    nodes_by_id = {node.id: node for node in graph.nodes}
+    paths_by_target_component: dict[str, list] = {}
+    for path in graph.attack_paths:
+        target_node = nodes_by_id.get(path.target_node_id)
+        if target_node is None or target_node.component_id is None:
+            continue
+        paths_by_target_component.setdefault(target_node.component_id, []).append(path)
+    entries_by_component = {
+        entry.component_id: entry
+        for entry in model.entry_points
+        if entry.exposure.is_external_facing()
+    }
+    crossed_flow_by_source = {
+        flow.source_component_id: flow
+        for flow in model.data_flows
+        if flow.trust_boundary_crossed
+    }
+    boundary_id = model.trust_boundaries[0].id if model.trust_boundaries else None
+    threats = []
+    for component in model.components:
+        entry = entries_by_component.get(component.id)
+        crossed_flow = crossed_flow_by_source.get(component.id)
+        candidate_paths = paths_by_target_component.get(component.id, graph.attack_paths)
+        attack_path = candidate_paths[0]
+        narrative = [
+            nodes_by_id[step.node_id].name
+            for step in attack_path.steps
+            if step.node_id in nodes_by_id
+        ]
+        provenance = ThreatProvenance(
+            entry_point_id=entry.id if entry is not None else None,
+            trust_boundary_id=boundary_id if crossed_flow is not None else None,
+            actor_id=entry.actor_id if entry is not None else None,
+            attack_path_id=attack_path.id,
+            attack_path=narrative,
+            rationale=(
+                f"Identified because {component.name} is present in the architecture "
+                f"and is exposed to {_stride_category(component.component_type).value}."
             ),
-            evidence=component.evidence,
-            confidence=component.confidence,
-            assumptions=model.assumptions,
-            component_id=component.id,
-            category=_stride_category(component.component_type),
-            status=ThreatStatus.IDENTIFIED,
-            attack_preconditions=["The component is reachable by a potential attacker."],
-            impact="Security properties of the referenced component could be affected.",
         )
-        for component in model.components
-    ]
+        threats.append(
+            StrideThreat(
+                id=f"threat-{component.id}",
+                name=f"{_stride_category(component.component_type).value} at {component.name}",
+                description=(
+                    f"The {component.name} component may be exposed to "
+                    f"{_stride_category(component.component_type).value}."
+                ),
+                evidence=component.evidence,
+                confidence=component.confidence,
+                assumptions=model.assumptions,
+                component_id=component.id,
+                data_flow_id=crossed_flow.id if crossed_flow is not None else None,
+                category=_stride_category(component.component_type),
+                status=ThreatStatus.IDENTIFIED,
+                attack_preconditions=["The component is reachable by a potential attacker."],
+                impact="Security properties of the referenced component could be affected.",
+                provenance=provenance,
+            )
+        )
     register = StrideThreatRegister(
         artifact_id="stride-threat-register",
         title="STRIDE Threat Register",

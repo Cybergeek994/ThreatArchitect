@@ -31,6 +31,7 @@ from threatmodeler.orchestration.prompts import SecurePromptTemplate, StrideThre
 from threatmodeler.orchestration.prompts.registry import ArtifactPromptBuilderFactory
 from threatmodeler.validation.pydantic_schema_provider import PydanticSchemaProvider
 
+from tests.fixtures.graph_fixtures import stride_upstream_context_for_model
 from tests.fixtures.mock_agent_provider import create_mock_agent_provider_for_agent_assisted
 
 
@@ -125,7 +126,7 @@ class TestAgentDownstreamArtifactGenerationPositive:
         ],
     ) -> None:
         metadata = ArtifactMetadataService()
-        threats = stride_service.generate(canonical_system_model)
+        threats = stride_service.generate(stride_upstream_context_for_model(canonical_system_model))
         risks = RiskScoringService(metadata).generate(canonical_system_model, threats)
         mitigations = MitigationGenerationService(metadata).generate_plan(
             canonical_system_model, risks
@@ -225,7 +226,7 @@ class TestAgentDownstreamArtifactGenerationErrors:
         ],
     ) -> None:
         metadata = ArtifactMetadataService()
-        threats = stride_service.generate(canonical_system_model)
+        threats = stride_service.generate(stride_upstream_context_for_model(canonical_system_model))
         risks = RiskScoringService(metadata).generate(canonical_system_model, threats)
         mitigations = MitigationGenerationService(metadata).generate_plan(
             canonical_system_model, risks
@@ -254,7 +255,7 @@ class TestAgentControlMappingCatalogErrors:
         ],
     ) -> None:
         metadata = ArtifactMetadataService()
-        threats = stride_service.generate(canonical_system_model)
+        threats = stride_service.generate(stride_upstream_context_for_model(canonical_system_model))
         risks = RiskScoringService(metadata).generate(canonical_system_model, threats)
         mitigations = MitigationGenerationService(metadata).generate_plan(
             canonical_system_model, risks

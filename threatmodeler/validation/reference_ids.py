@@ -17,9 +17,20 @@ from threatmodeler.contracts.artifacts import (
     StrideThreatRegister,
     TechnicalThreatModelReport,
 )
-from threatmodeler.contracts.artifacts.architecture import TrustBoundaryMap
+from threatmodeler.contracts.artifacts.architecture import (
+    AuthenticationAuthorizationModel,
+    DataFlowDiagramModel,
+    DeploymentModelArtifact,
+    TrustBoundaryMap,
+)
 from threatmodeler.contracts.artifacts.base import ThreatLinkedItem
-from threatmodeler.contracts.artifacts.inventories import ActorModel, AssetInventory
+from threatmodeler.contracts.artifacts.graph import ArchitectureGraph, AttackPath, GraphEdge, GraphNode
+from threatmodeler.contracts.artifacts.inventories import (
+    ActorModel,
+    AssetInventory,
+    ComponentInventory,
+    EntryPointInventory,
+)
 from threatmodeler.contracts.system_model import CanonicalSystemModel
 from threatmodeler.contracts.schema_introspection import reference_fields_for_models
 
@@ -41,6 +52,15 @@ _REFERENCE_MODELS: tuple[type[BaseModel], ...] = (
     TrustBoundaryMap,
     ActorModel,
     AssetInventory,
+    ComponentInventory,
+    EntryPointInventory,
+    DataFlowDiagramModel,
+    AuthenticationAuthorizationModel,
+    DeploymentModelArtifact,
+    ArchitectureGraph,
+    GraphNode,
+    GraphEdge,
+    AttackPath,
 )
 
 _REFERENCE_FIELDS = reference_fields_for_models(*_REFERENCE_MODELS) - _NON_ARTIFACT_REFERENCE_FIELDS

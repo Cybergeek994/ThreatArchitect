@@ -6,6 +6,7 @@ from pydantic import BaseModel, JsonValue
 
 from threatmodeler.contracts.artifacts import (
     AbuseMisuseCases,
+    ArchitectureGraph,
     AttackTree,
     ControlMapping,
     DataFlowDiagramModel,
@@ -237,6 +238,36 @@ class DfdPromptBuilder(_SchemaBoundArtifactPromptBuilder):
         )
 
 
+class ArchitectureGraphPromptBuilder(_SchemaBoundArtifactPromptBuilder):
+    """Build secure prompts for typed architecture graphs and attack paths."""
+
+    def __init__(
+        self,
+        secure_template: SecurePromptTemplate,
+        schema_provider: SchemaProvider,
+    ) -> None:
+        super().__init__(
+            secure_template,
+            schema_provider,
+            task_name="generate_architecture_graph",
+            output_model=ArchitectureGraph,
+            objective=(
+                "Build a typed architecture graph and enumerate plausible attack paths "
+                "from validated upstream artifacts."
+            ),
+            constraints=(
+                "Derive nodes and edges only from supplied upstream artifacts.",
+                "Every canonical component, data store, actor, and external entry point "
+                "must appear as at least one graph node.",
+                "Map each data flow to one or more typed graph edges.",
+                "Enumerate attack paths from each external or partner entry surface "
+                "to sensitive targets such as databases, secrets, or egress points.",
+                "Attack path steps must form a contiguous walk through graph nodes and edges.",
+                "Do not invent nodes, edges, or hops absent from the input payload.",
+            ),
+        )
+
+
 class StrideThreatPromptBuilder(_SchemaBoundArtifactPromptBuilder):
     """Build secure prompts for traceable STRIDE threat registers."""
 
@@ -257,9 +288,18 @@ class StrideThreatPromptBuilder(_SchemaBoundArtifactPromptBuilder):
             schema_provider,
             task_name="generate_stride_threats",
             output_model=StrideThreatRegister,
-            objective="Identify source-supported STRIDE threats in the canonical architecture.",
+            objective=(
+                "Identify source-supported STRIDE threats grounded in upstream artifacts "
+                "and architecture graph attack paths."
+            ),
             constraints=_merge_constraints(
                 (
+                    "Derive threats only from supplied upstream artifacts and "
+                    "`architecture_graph`; do not invent architecture absent from the payload.",
+                    "Every threat must cite an existing `provenance.attack_path_id` from "
+                    "`architecture_graph.attack_paths`.",
+                    "Populate `provenance.attack_path` with the graph node names from the "
+                    "cited attack path in walk order.",
                     "Apply system-focused threat identification: for each component "
                     "and data flow in the input, consider what can go wrong.",
                     "Generate at least one threat per applicable STRIDE category "
@@ -269,6 +309,17 @@ class StrideThreatPromptBuilder(_SchemaBoundArtifactPromptBuilder):
                     "When exit points are present, consider client-side attack "
                     "completion paths (XSS, information disclosure) that require "
                     "an exit point.",
+                    "Every threat must include non-empty `evidence` and a complete "
+                    "`provenance` object with non-empty `rationale`, `attack_path_id`, "
+                    "and `attack_path`.",
+                    "Every threat must link to at least one component, data flow, or "
+                    "asset id that appears on the cited attack path.",
+                    "Set `provenance.entry_point_id` when the threat targets a "
+                    "component of an external or partner entry point.",
+                    "Set `provenance.trust_boundary_id` when the threat references a "
+                    "data flow with `trust_boundary_crossed=true`.",
+                    "Set `provenance.actor_id` to the entry point's `actor_id` when "
+                    "that field is present on the linked entry point.",
                     stride_guidance,
                     risk_assessment_guidance,
                     threat_status_guidance,

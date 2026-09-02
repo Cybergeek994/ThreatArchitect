@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from threatmodeler.contracts.artifacts import (
     AbuseMisuseCases,
+    ArchitectureGraph,
     AttackTree,
     ControlMapping,
     DataFlowDiagramModel,
@@ -26,6 +27,7 @@ def create_downstream_schema_registry() -> PydanticOutputSchemaRegistry:
     """
     schemas: dict[str, type[BaseModel]] = {
         "DataFlowDiagramModel": DataFlowDiagramModel,
+        "ArchitectureGraph": ArchitectureGraph,
         "AttackTree": AttackTree,
         "AbuseMisuseCases": AbuseMisuseCases,
         "RiskRegister": RiskRegister,

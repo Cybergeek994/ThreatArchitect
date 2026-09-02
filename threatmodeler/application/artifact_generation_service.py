@@ -82,6 +82,7 @@ class ArtifactGenerationService:
             ("entry-points", bundle.entry_point_inventory),
             ("authz-model", bundle.authentication_authorization_model),
             ("deployment-model", bundle.deployment_model),
+            ("architecture-graph", bundle.architecture_graph),
             ("stride-threats", bundle.stride_threat_register),
             ("attack-tree", bundle.attack_tree),
             ("abuse-cases", bundle.abuse_misuse_cases),

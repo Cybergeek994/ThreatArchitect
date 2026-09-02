@@ -29,8 +29,11 @@ _BUNDLE_ENTITY_REFERENCE_FIELDS = frozenset(
         "source_component_id",
         "threat_ids",
         "top_risk_ids",
+        "trust_boundary_id",
         "trust_level_ids",
         "unassigned_component_ids",
+        "entry_point_id",
+        "exit_point_id",
     }
 )
 _ARTIFACT_REFERENCE_FIELD = "referenced_artifact_ids"

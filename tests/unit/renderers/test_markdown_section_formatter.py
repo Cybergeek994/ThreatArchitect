@@ -1,6 +1,7 @@
 """Tests for deterministic Markdown section formatters."""
 
 from threatmodeler.contracts.artifacts import (
+    ThreatProvenance,
     AbuseMisuseCase,
     AbuseMisuseCases,
     Asset,
@@ -139,6 +140,64 @@ class TestDefaultMarkdownSectionFormatterPositive:
         assert "restricted" in rendered
         assert "tl-admin, tl-customer" in rendered
 
+    def test_format_threat_dossiers_joins_mitigations_and_evidence(self) -> None:
+        from threatmodeler.contracts.source import Evidence, SourceReference, SourceType
+        from threatmodeler.renderers.mitigation_by_threat_index import MitigationByThreatIndex
+
+        source = SourceReference(
+            source_type=SourceType.CONFLUENCE_PAGE,
+            source_id="page-1",
+            location="section",
+            excerpt="excerpt",
+        )
+        threats = StrideThreatRegister.model_construct(
+            **_artifact_fields("threats"),
+            threats=[
+                StrideThreat.model_construct(
+                    id="threat-1",
+                    name="Spoofed webhook",
+                    description="Description for Spoofed webhook",
+                    confidence=0.9,
+                    assumptions=[],
+                    category=StrideCategory.SPOOFING,
+                    status=ThreatStatus.IDENTIFIED,
+                    impact="Impact",
+                    affected_component_ids=[],
+                    component_ids=["api"],
+                    attack_preconditions=["Reach API"],
+                    evidence=[Evidence(summary="Webhook is public", source_references=[source])],
+                    provenance=ThreatProvenance(
+                        entry_point_id="entry-1",
+                        attack_path_id="attack-path-1",
+                        attack_path=["Reach webhook", "Spoof identity"],
+                        rationale="Identified from public webhook evidence.",
+                    ),
+                )
+            ],
+        )
+        plan = MitigationPlan.model_construct(
+            **_artifact_fields("mitigations"),
+            mitigations=[
+                Mitigation.model_construct(
+                    **_item_fields("mit-1", "Add MFA"),
+                    risk_ids=[],
+                    threat_ids=["threat-1"],
+                    status=MitigationStatus.PLANNED,
+                    priority=WorkPriority.HIGH,
+                    control_type=ControlType.PREVENTIVE,
+                )
+            ],
+        )
+
+        rendered = DefaultMarkdownSectionFormatter().format_threat_dossiers(
+            threats,
+            MitigationByThreatIndex(plan),
+        )
+
+        assert "Webhook is public" in rendered
+        assert "Add MFA" in rendered
+        assert "Reach API" in rendered
+
     def test_format_threats_table_includes_status_and_blast_radius(self) -> None:
         threats = StrideThreatRegister.model_construct(
             **_artifact_fields("threats"),
@@ -150,6 +209,11 @@ class TestDefaultMarkdownSectionFormatterPositive:
                     impact="Forged callbacks alter settlement status.",
                     affected_component_ids=["payments-api", "api-gateway"],
                     component_ids=["api-gateway"],
+                    provenance=ThreatProvenance(
+                        attack_path_id="attack-path-1",
+                        attack_path=["Reach webhook", "Spoof callback"],
+                        rationale="Identified from webhook exposure evidence.",
+                    ),
                 )
             ],
         )
@@ -159,6 +223,8 @@ class TestDefaultMarkdownSectionFormatterPositive:
         assert "partially_mitigated" in rendered
         assert "spoofing" in rendered
         assert "api-gateway, payments-api" in rendered
+        assert "Rationale" in rendered
+        assert "Attack path" in rendered
 
     def test_format_risks_table_handles_optional_owner_and_response(self) -> None:
         risks = RiskRegister.model_construct(
@@ -423,7 +489,7 @@ class TestDefaultMarkdownSectionFormatterEmpty:
         )
         assert (
             DefaultMarkdownSectionFormatter().format_threats_table(threats)
-            == "No STRIDE threats were identified."
+            == "_No STRIDE threats were identified._"
         )
 
     def test_empty_risks(self) -> None:
@@ -532,6 +598,11 @@ class TestDefaultMarkdownSectionFormatterEdgeCases:
                     impact=long_impact,
                     affected_component_ids=[],
                     component_ids=["api"],
+                    provenance=ThreatProvenance(
+                        attack_path_id="attack-path-1",
+                        attack_path=["Reach API", "Tamper data"],
+                        rationale="Identified from long-impact fixture evidence.",
+                    ),
                 )
             ],
         )
@@ -552,6 +623,11 @@ class TestDefaultMarkdownSectionFormatterEdgeCases:
                     impact="Impact | text",
                     affected_component_ids=[],
                     component_ids=["api"],
+                    provenance=ThreatProvenance(
+                        attack_path_id="attack-path-1",
+                        attack_path=["Reach API", "Spoof identity"],
+                        rationale="Identified from pipe-escape fixture evidence.",
+                    ),
                 )
             ],
         )

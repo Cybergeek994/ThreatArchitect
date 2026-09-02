@@ -12,6 +12,7 @@ EXPECTED_ARTIFACT_JSON_NAMES: frozenset[str] = frozenset(
         "entry-points.json",
         "authz-model.json",
         "deployment-model.json",
+        "architecture-graph.json",
         "stride-threats.json",
         "attack-tree.json",
         "abuse-cases.json",
@@ -31,6 +32,7 @@ EXPECTED_ARTIFACT_JSON_NAMES: frozenset[str] = frozenset(
 EXPECTED_RENDERED_PATHS: tuple[str, ...] = (
     "json/artifact-bundle.json",
     "mermaid/dfd.mmd",
+    "mermaid/architecture-graph.mmd",
     "mermaid/attack-tree.mmd",
     "mermaid/trust-boundaries.mmd",
     "markdown/technical-report.md",

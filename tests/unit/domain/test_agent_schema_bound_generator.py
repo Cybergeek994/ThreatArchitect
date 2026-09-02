@@ -8,12 +8,12 @@ from threatmodeler.contracts.prompts import PromptBuildResult, PromptMessage, Pr
 from threatmodeler.contracts.system_model import CanonicalSystemModel
 from threatmodeler.domain.agent_schema_bound_generator import (
     AgentSchemaBoundArtifactGenerator,
-    _chain_item_validators,
 )
 from threatmodeler.domain.artifact_metadata import ArtifactMetadataService
 from threatmodeler.domain.report_generation import ReportGenerationService
 from threatmodeler.errors import AgentSchemaValidationError
 from threatmodeler.ports.prompt_builder import PromptBuilder
+from threatmodeler.validation.composite_item_validator import CompositeItemValidator
 from threatmodeler.validation.pydantic_schema_provider import PydanticSchemaProvider
 
 from tests.fixtures.mock_agent_provider import create_mock_agent_provider
@@ -126,11 +126,11 @@ class TestAgentSchemaBoundGeneratorErrors:
         assert context["validation_errors"]
 
 
-class TestChainItemValidators:
+class TestCompositeItemValidator:
     """Verify optional item-validator chaining."""
 
     def test_chain_returns_none_for_empty_input(self) -> None:
-        assert _chain_item_validators(None, None) is None
+        assert CompositeItemValidator.of(None, None) is None
 
     def test_chain_combines_multiple_validators(self) -> None:
         def first(_list_field: str, _payload: object, _lists: object) -> list[str]:
@@ -139,6 +139,6 @@ class TestChainItemValidators:
         def second(_list_field: str, _payload: object, _lists: object) -> list[str]:
             return ["second"]
 
-        chained = _chain_item_validators(first, second)
+        chained = CompositeItemValidator.of(first, second)
         assert chained is not None
         assert chained("controls", {}, {}) == ["first", "second"]

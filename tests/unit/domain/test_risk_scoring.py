@@ -7,6 +7,7 @@ from threatmodeler.contracts.artifacts import (
     StrideCategory,
     StrideThreat,
     StrideThreatRegister,
+    ThreatProvenance,
     ThreatStatus,
 )
 from threatmodeler.contracts.artifacts.threats import (
@@ -16,6 +17,12 @@ from threatmodeler.contracts.artifacts.threats import (
 from threatmodeler.contracts.system_model import CanonicalSystemModel, ExposureType
 from threatmodeler.domain.artifact_metadata import ArtifactMetadataService
 from threatmodeler.domain.risk_scoring import RiskScoringService
+
+from tests.fixtures.graph_fixtures import (
+    architecture_graph_for_model,
+    attack_path_narrative,
+    default_attack_path_id,
+)
 
 
 @pytest.fixture
@@ -29,6 +36,8 @@ def threat_factory(canonical_system_model: CanonicalSystemModel):
         exploitability: ThreatExploitabilityAssessment | None = None,
         impact_assessment: ThreatImpactAssessment | None = None,
     ) -> StrideThreat:
+        graph = architecture_graph_for_model(canonical_system_model)
+        attack_path_id = default_attack_path_id(graph)
         return StrideThreat(
             id=threat_id,
             name="Test threat",
@@ -42,6 +51,13 @@ def threat_factory(canonical_system_model: CanonicalSystemModel):
             impact="Test impact.",
             exploitability=exploitability,
             impact_assessment=impact_assessment,
+            provenance=ThreatProvenance(
+                entry_point_id=canonical_system_model.entry_points[0].id,
+                actor_id=canonical_system_model.entry_points[0].actor_id,
+                attack_path_id=attack_path_id,
+                attack_path=attack_path_narrative(graph, attack_path_id),
+                rationale="Identified from fixture architecture evidence.",
+            ),
         )
 
     return create
@@ -94,6 +110,8 @@ class TestRiskScoringPositive:
         self,
         canonical_system_model: CanonicalSystemModel,
     ) -> None:
+        graph = architecture_graph_for_model(canonical_system_model)
+        attack_path_id = default_attack_path_id(graph)
         threat = StrideThreat(
             id="threat-external",
             name="Spoof customer",
@@ -105,6 +123,13 @@ class TestRiskScoringPositive:
             category=StrideCategory.SPOOFING,
             status=ThreatStatus.IDENTIFIED,
             impact="Unauthorized access to payment operations.",
+            provenance=ThreatProvenance(
+                entry_point_id=canonical_system_model.entry_points[0].id,
+                actor_id=canonical_system_model.entry_points[0].actor_id,
+                attack_path_id=attack_path_id,
+                attack_path=attack_path_narrative(graph, attack_path_id),
+                rationale="Identified from external API exposure evidence.",
+            ),
         )
         threat_register = StrideThreatRegister(
             artifact_id="stride-threat-register",
@@ -124,6 +149,8 @@ class TestRiskScoringPositive:
         self,
         canonical_system_model: CanonicalSystemModel,
     ) -> None:
+        graph = architecture_graph_for_model(canonical_system_model)
+        attack_path_id = default_attack_path_id(graph)
         threat = StrideThreat(
             id="threat-internal",
             name="Tamper with batch job",
@@ -135,6 +162,11 @@ class TestRiskScoringPositive:
             category=StrideCategory.TAMPERING,
             status=ThreatStatus.IDENTIFIED,
             impact="Integrity loss for internal records.",
+            provenance=ThreatProvenance(
+                attack_path_id=attack_path_id,
+                attack_path=attack_path_narrative(graph, attack_path_id),
+                rationale="Identified from internal processing architecture evidence.",
+            ),
         )
         threat_register = StrideThreatRegister(
             artifact_id="stride-threat-register",
@@ -182,6 +214,8 @@ class TestRiskScoringSeverityMatrix:
         self,
         canonical_system_model: CanonicalSystemModel,
     ) -> None:
+        graph = architecture_graph_for_model(canonical_system_model)
+        attack_path_id = default_attack_path_id(graph)
         threat = StrideThreat(
             id="threat-multi-target",
             name="Spoof customer",
@@ -194,6 +228,13 @@ class TestRiskScoringSeverityMatrix:
             category=StrideCategory.SPOOFING,
             status=ThreatStatus.IDENTIFIED,
             impact="Unauthorized access to payment operations.",
+            provenance=ThreatProvenance(
+                entry_point_id=canonical_system_model.entry_points[0].id,
+                actor_id=canonical_system_model.entry_points[0].actor_id,
+                attack_path_id=attack_path_id,
+                attack_path=attack_path_narrative(graph, attack_path_id),
+                rationale="Identified from multi-target API exposure evidence.",
+            ),
         )
         service = RiskScoringService(ArtifactMetadataService())
 

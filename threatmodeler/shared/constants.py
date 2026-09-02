@@ -102,6 +102,7 @@ class ArtifactKind(StrEnum):
 
     ARTIFACT_BUNDLE = "artifact-bundle"
     DFD = "dfd"
+    ARCHITECTURE_GRAPH = "architecture-graph"
     ATTACK_TREE = "attack-tree"
     TRUST_BOUNDARIES = "trust-boundaries"
     TECHNICAL_REPORT = "technical-report"

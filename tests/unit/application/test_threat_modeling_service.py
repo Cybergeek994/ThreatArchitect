@@ -36,6 +36,7 @@ class TestThreatModelingServicePositive:
         original = service._downstream_strategy
         downstream = Mock(spec=DownstreamArtifactGenerationStrategy)
         downstream.generate_dfd.side_effect = original.generate_dfd
+        downstream.generate_architecture_graph.side_effect = original.generate_architecture_graph
         downstream.generate_attack_tree.side_effect = original.generate_attack_tree
         downstream.generate_abuse_cases.side_effect = original.generate_abuse_cases
         downstream.generate_risk_register.side_effect = original.generate_risk_register
@@ -54,6 +55,7 @@ class TestThreatModelingServicePositive:
         assert bundle.artifact_id == "artifact-bundle"
         assert [call[0] for call in downstream.method_calls] == [
             "generate_dfd",
+            "generate_architecture_graph",
             "generate_attack_tree",
             "generate_abuse_cases",
             "generate_risk_register",
@@ -80,7 +82,7 @@ class TestThreatModelingServicePositive:
 
         bundle = service.generate(canonical_system_model)
 
-        assert validator.validate.call_count == 21
+        assert validator.validate.call_count == 23
         assert bundle.stride_threat_register.threats
 
 

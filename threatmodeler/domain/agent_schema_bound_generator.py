@@ -9,35 +9,15 @@ from threatmodeler.domain.tool_calling.discarding_journal import DiscardingConst
 from threatmodeler.errors import AgentSchemaValidationError
 from threatmodeler.ports.artifact_construction_session_factory import (
     ArtifactConstructionSessionFactory,
+    FinishValidator,
     ItemValidator,
 )
 from threatmodeler.ports.construction_journal import ConstructionJournal
 from threatmodeler.ports.prompt_builder import PromptBuilder
 from threatmodeler.ports.schema_provider import SchemaProvider
 from threatmodeler.ports.tool_calling_provider import ToolCallingProvider
+from threatmodeler.validation.composite_item_validator import CompositeItemValidator
 from threatmodeler.validation.reference_ids import KnownIdReferenceChecker, collect_known_ids
-
-
-def _chain_item_validators(
-    *validators: ItemValidator | None,
-) -> ItemValidator | None:
-    active = [validator for validator in validators if validator is not None]
-    if not active:
-        return None
-    if len(active) == 1:
-        return active[0]
-
-    def validate(
-        list_field: str,
-        payload: dict[str, JsonValue],
-        lists: dict[str, list[dict[str, JsonValue]]],
-    ) -> list[str]:
-        violations: list[str] = []
-        for validator in active:
-            violations.extend(validator(list_field, payload, lists))
-        return violations
-
-    return validate
 
 
 class AgentSchemaBoundArtifactGenerator:
@@ -69,6 +49,7 @@ class AgentSchemaBoundArtifactGenerator:
         additional_context: dict[str, JsonValue] | None = None,
         session_factory: ArtifactConstructionSessionFactory | None = None,
         item_validator: ItemValidator | None = None,
+        finish_validator: FinishValidator | None = None,
     ) -> T:
         """Request, validate, and return one schema-bound artifact.
 
@@ -110,10 +91,11 @@ class AgentSchemaBoundArtifactGenerator:
             output_model,
             self._journal or DiscardingConstructionJournal(),
             source_text=source_text_from_payload(input_payload),
-            item_validator=_chain_item_validators(
+            item_validator=CompositeItemValidator.of(
                 KnownIdReferenceChecker(collect_known_ids(input_payload)),
                 item_validator,
             ),
+            finish_validator=finish_validator,
             session_factory=session_factory,
         )
         try:

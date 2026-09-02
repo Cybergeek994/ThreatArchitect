@@ -122,6 +122,9 @@ class TestSchemaGuidanceHelperBranches:
         keys = {item.key for item in constraints}
         assert "coverage_entry_points" in keys
         assert "coverage_affected_components" in keys
+        assert "coverage_provenance_rationale" in keys
+        assert "coverage_provenance_evidence" in keys
         texts = " ".join(item.text for item in constraints)
         assert "system_model.entry_points" in texts
         assert "partially_mitigated" in texts
+        assert "provenance.entry_point_id" in texts

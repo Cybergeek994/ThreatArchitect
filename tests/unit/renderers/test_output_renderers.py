@@ -23,6 +23,9 @@ from threatmodeler.ports.artifact_validator import ArtifactValidator
 from threatmodeler.renderers.flow_diagram_renderer import FlowDiagramRenderer
 from threatmodeler.renderers.json_artifact_renderer import JsonArtifactRenderer
 from threatmodeler.renderers.markdown_report_renderer import MarkdownReportRenderer
+from threatmodeler.renderers.mermaid_architecture_graph_renderer import (
+    MermaidArchitectureGraphRenderer,
+)
 from threatmodeler.renderers.mermaid_attack_tree_renderer import (
     MermaidAttackTreeRenderer,
 )
@@ -95,6 +98,18 @@ class TestOutputRenderersPositive:
         assert "TLS/PostgreSQL" in rendered.content
         assert "==>" in rendered.content or "-->" in rendered.content
         assert renderer.render(dfd).content == rendered.content
+
+    def test_mermaid_architecture_graph_renderer_renders_nodes_and_edges(
+        self,
+        artifact_bundle: ArtifactBundle,
+    ) -> None:
+        graph = artifact_bundle.architecture_graph
+        rendered = MermaidArchitectureGraphRenderer().render(graph)
+
+        assert rendered.content.startswith("flowchart TD\n")
+        assert "(entry_surface)" in rendered.content or "(api)" in rendered.content
+        assert "-->" in rendered.content
+        assert rendered.file_extension == ".mmd"
 
     def test_mermaid_attack_tree_renderer_renders_traceable_tree(
         self,
@@ -271,6 +286,10 @@ class TestOutputRenderersPositive:
 
         assert isinstance(factory.create("json", "artifact-bundle"), JsonArtifactRenderer)
         assert isinstance(factory.create("mermaid", "dfd"), MermaidDfdRenderer)
+        assert isinstance(
+            factory.create("mermaid", "architecture-graph"),
+            MermaidArchitectureGraphRenderer,
+        )
         assert isinstance(factory.create("mermaid", "attack-tree"), MermaidAttackTreeRenderer)
         assert isinstance(
             factory.create("mermaid", "trust-boundaries"),
@@ -328,6 +347,7 @@ class TestOutputRenderersPositive:
         assert result.exit_code == 0
         assert (output_dir / "json" / "artifact-bundle.json").is_file()
         assert (output_dir / "mermaid" / "dfd.mmd").is_file()
+        assert (output_dir / "mermaid" / "architecture-graph.mmd").is_file()
         assert (output_dir / "mermaid" / "attack-tree.mmd").is_file()
         assert (output_dir / "mermaid" / "trust-boundaries.mmd").is_file()
         assert (output_dir / "markdown" / "technical-report.md").is_file()
@@ -392,6 +412,15 @@ class TestOutputRenderersNegative:
             MermaidAttackTreeRenderer().render(artifact_bundle.data_flow_diagram)
 
         assert captured.value.error_code == "MERMAID_ATTACK_TREE_TYPE_INVALID"
+
+    def test_mermaid_architecture_graph_renderer_rejects_wrong_artifact_type(
+        self,
+        artifact_bundle: ArtifactBundle,
+    ) -> None:
+        with pytest.raises(ArtifactRenderingError) as captured:
+            MermaidArchitectureGraphRenderer().render(artifact_bundle.data_flow_diagram)
+
+        assert captured.value.error_code == "MERMAID_ARCHITECTURE_GRAPH_TYPE_INVALID"
 
     def test_mermaid_trust_boundary_renderer_rejects_wrong_artifact_type(
         self,

@@ -3,7 +3,9 @@
 from unittest.mock import Mock
 
 from threatmodeler.contracts.artifacts import MitigationPlan, RiskRegister, StrideThreatRegister
+from threatmodeler.contracts.artifacts.stride_context import PreStrideArtifacts
 from threatmodeler.contracts.system_model import CanonicalSystemModel
+from threatmodeler.domain.architecture_graph_generation import ArchitectureGraphGenerationService
 from threatmodeler.domain.attack_tree_generation import AttackTreeGenerationService
 from threatmodeler.domain.control_mapping import ControlMappingService
 from threatmodeler.domain.dfd_generation import DfdGenerationService
@@ -15,6 +17,8 @@ from threatmodeler.domain.report_generation import ReportGenerationService
 from threatmodeler.domain.risk_scoring import RiskScoringService
 from threatmodeler.domain.stride_generation import StrideThreatGenerationService
 
+from tests.fixtures.graph_fixtures import stride_upstream_context_for_model
+
 
 class TestDeterministicDownstreamArtifactGenerationPositive:
     """Verify deterministic strategy delegates to injected domain services."""
@@ -24,6 +28,7 @@ class TestDeterministicDownstreamArtifactGenerationPositive:
         canonical_system_model: CanonicalSystemModel,
     ) -> None:
         dfd_service = Mock(spec=DfdGenerationService)
+        architecture_graph_service = Mock(spec=ArchitectureGraphGenerationService)
         attack_tree_service = Mock(spec=AttackTreeGenerationService)
         stride_service = Mock(spec=StrideThreatGenerationService)
         risk_service = Mock(spec=RiskScoringService)
@@ -32,6 +37,7 @@ class TestDeterministicDownstreamArtifactGenerationPositive:
         report_service = Mock(spec=ReportGenerationService)
         strategy = DeterministicDownstreamArtifactGenerationStrategy(
             dfd_service=dfd_service,
+            architecture_graph_service=architecture_graph_service,
             attack_tree_service=attack_tree_service,
             stride_service=stride_service,
             risk_service=risk_service,
@@ -43,8 +49,13 @@ class TestDeterministicDownstreamArtifactGenerationPositive:
         risks = Mock(spec=RiskRegister)
         mitigations = Mock(spec=MitigationPlan)
         requirements = Mock()
+        pre_stride = PreStrideArtifacts(**stride_upstream_context_for_model(canonical_system_model).model_dump(exclude={"architecture_graph"}))
 
         assert strategy.generate_dfd(canonical_system_model) is dfd_service.generate.return_value
+        assert (
+            strategy.generate_architecture_graph(pre_stride)
+            is architecture_graph_service.generate.return_value
+        )
         assert (
             strategy.generate_attack_tree(canonical_system_model, threats)
             is attack_tree_service.generate.return_value
@@ -84,6 +95,7 @@ class TestDeterministicDownstreamArtifactGenerationPositive:
             is report_service.generate_technical_report.return_value
         )
         dfd_service.generate.assert_called_once_with(canonical_system_model)
+        architecture_graph_service.generate.assert_called_once_with(canonical_system_model)
         attack_tree_service.generate.assert_called_once_with(canonical_system_model, threats)
         stride_service.generate_abuse_cases.assert_called_once_with(canonical_system_model, threats)
         risk_service.generate.assert_called_once_with(canonical_system_model, threats)
@@ -114,6 +126,7 @@ class TestDeterministicDownstreamArtifactGenerationNegative:
         mitigation_service = Mock(spec=MitigationGenerationService)
         strategy = DeterministicDownstreamArtifactGenerationStrategy(
             dfd_service=Mock(spec=DfdGenerationService),
+            architecture_graph_service=Mock(spec=ArchitectureGraphGenerationService),
             attack_tree_service=Mock(spec=AttackTreeGenerationService),
             stride_service=Mock(spec=StrideThreatGenerationService),
             risk_service=risk_service,

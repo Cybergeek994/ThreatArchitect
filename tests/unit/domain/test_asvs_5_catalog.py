@@ -36,6 +36,7 @@ from threatmodeler.validation.control_mapping_candidate_validator import (
     build_candidate_membership_validator,
 )
 
+from tests.fixtures.graph_fixtures import stride_upstream_context_for_model
 from tests.fixtures.mock_asvs_semantic_ranker import MockAsvsSemanticRanker
 from tests.fixtures.mock_agent_provider import (
     create_mock_agent_provider,
@@ -177,7 +178,7 @@ class TestControlMappingCandidateService:
             ),
             metadata,
         )
-        threats = stride_service.generate(canonical_system_model)
+        threats = stride_service.generate(stride_upstream_context_for_model(canonical_system_model))
         risks = RiskScoringService(metadata).generate(canonical_system_model, threats)
         mitigations = MitigationGenerationService(metadata).generate_plan(
             canonical_system_model, risks
@@ -603,7 +604,7 @@ class TestLlmAsvsSemanticRanker:
             ),
             metadata,
         )
-        threats = stride_service.generate(canonical_system_model)
+        threats = stride_service.generate(stride_upstream_context_for_model(canonical_system_model))
         risks = RiskScoringService(metadata).generate(canonical_system_model, threats)
         mitigations = MitigationGenerationService(metadata).generate_plan(
             canonical_system_model, risks

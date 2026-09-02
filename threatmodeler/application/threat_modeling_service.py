@@ -1,6 +1,7 @@
 """Facade for generating the complete MVP1 threat-model artifact bundle."""
 
 from threatmodeler.contracts.artifacts import ArtifactBundle, ArtifactModel
+from threatmodeler.contracts.artifacts.stride_context import PreStrideArtifacts, StrideUpstreamContext
 from threatmodeler.contracts.system_model import CanonicalSystemModel
 from threatmodeler.domain.artifact_metadata import ArtifactMetadataService
 from threatmodeler.domain.downstream_artifact_generation import DownstreamArtifactGenerationStrategy
@@ -86,7 +87,24 @@ class ThreatModelingService:
             model
         )
         deployment_model = self._inventory_service.generate_deployment_model(model)
-        stride_threats = self._stride_service.generate(model)
+        pre_stride = PreStrideArtifacts(
+            system_model=model,
+            component_inventory=component_inventory,
+            asset_inventory=asset_inventory,
+            actor_model=actor_model,
+            data_flow_diagram=data_flow_diagram,
+            trust_boundary_map=trust_boundary_map,
+            entry_point_inventory=entry_point_inventory,
+            authentication_authorization_model=authentication_model,
+            deployment_model=deployment_model,
+        )
+        architecture_graph = self._downstream_strategy.generate_architecture_graph(pre_stride)
+        self._validate(architecture_graph)
+        stride_context = StrideUpstreamContext(
+            **pre_stride.model_dump(),
+            architecture_graph=architecture_graph,
+        )
+        stride_threats = self._stride_service.generate(stride_context)
         self._validate(stride_threats)
         attack_tree = self._downstream_strategy.generate_attack_tree(model, stride_threats)
         abuse_cases = self._downstream_strategy.generate_abuse_cases(model, stride_threats)
@@ -127,6 +145,7 @@ class ThreatModelingService:
             mitigation_plan,
             data_flow_diagram,
             missing_information,
+            architecture_graph,
         )
         technical_report = self._report_service.with_completeness_section(
             technical_report,
@@ -142,6 +161,7 @@ class ThreatModelingService:
             entry_point_inventory,
             authentication_model,
             deployment_model,
+            architecture_graph,
             attack_tree,
             abuse_cases,
             risk_register,
@@ -174,6 +194,7 @@ class ThreatModelingService:
             entry_point_inventory=entry_point_inventory,
             authentication_authorization_model=authentication_model,
             deployment_model=deployment_model,
+            architecture_graph=architecture_graph,
             stride_threat_register=stride_threats,
             attack_tree=attack_tree,
             abuse_misuse_cases=abuse_cases,

@@ -21,6 +21,7 @@ from threatmodeler.contracts.artifacts import (
     StrideThreatRegister,
     ThreatModelCompletenessReport,
 )
+from threatmodeler.renderers.mitigation_by_threat_index import MitigationByThreatIndex
 
 
 class MarkdownCellLimit(IntEnum):
@@ -58,6 +59,14 @@ class MarkdownSectionFormatter(Protocol):
 
     def format_threats_table(self, threats: StrideThreatRegister) -> str:
         """Format STRIDE threats as a Markdown table."""
+        ...
+
+    def format_threat_dossiers(
+        self,
+        threats: StrideThreatRegister,
+        mitigation_index: MitigationByThreatIndex,
+    ) -> str:
+        """Format per-threat provenance dossiers with linked mitigations."""
         ...
 
     def format_risks_table(self, risks: RiskRegister) -> str:
@@ -188,39 +197,84 @@ class DefaultMarkdownSectionFormatter:
         )
 
     def format_threats_table(self, threats: StrideThreatRegister) -> str:
-        """Format STRIDE threats as a Markdown table.
+        """Format STRIDE threats as compact dossiers without mitigation joins.
 
         Args:
             threats: Validated STRIDE threat register.
 
         Returns:
-            Markdown table or empty-message paragraph.
+            Markdown dossiers or empty-message paragraph.
         """
-        rows = tuple(
-            (
-                self._cell(threat.id, MarkdownCellLimit.SHORT),
-                self._cell(threat.name, MarkdownCellLimit.MEDIUM),
-                self._cell(threat.category.value, MarkdownCellLimit.SHORT),
-                self._cell(threat.status.value, MarkdownCellLimit.SHORT),
-                self._cell(threat.impact, MarkdownCellLimit.LONG),
-                self._join_ids(threat.affected_component_ids),
+        return self.format_threat_dossiers(threats, MitigationByThreatIndex.empty())
+
+    def format_threat_dossiers(
+        self,
+        threats: StrideThreatRegister,
+        mitigation_index: MitigationByThreatIndex,
+    ) -> str:
+        """Format per-threat provenance dossiers with linked mitigations.
+
+        Args:
+            threats: Validated STRIDE threat register.
+            mitigation_index: Reverse index of mitigations by threat id.
+
+        Returns:
+            Markdown dossiers or empty-message paragraph.
+        """
+        if not threats.threats:
+            return "_No STRIDE threats were identified._"
+        blocks: list[str] = []
+        for threat in sorted(threats.threats, key=lambda item: item.id):
+            evidence_lines = [
+                f"- {self._cell(item.summary, MarkdownCellLimit.LONG)}"
+                for item in threat.evidence[:2]
+            ]
+            if not evidence_lines:
+                evidence_lines = ["- No evidence recorded"]
+            linked = mitigation_index.for_threat(threat.id)
+            mitigation_lines = (
+                [
+                    f"- `{item.id}`: {self._cell(item.name, MarkdownCellLimit.MEDIUM)}"
+                    for item in linked
+                ]
+                if linked
+                else ["- No linked mitigations"]
             )
-            for threat in sorted(threats.threats, key=lambda item: item.id)
-        )
-        return self._render_table(
-            MarkdownTableSpec(
-                headers=(
-                    "ID",
-                    "Name",
-                    "Category",
-                    "Status",
-                    "Impact",
-                    "Affected Components",
-                ),
-                rows=rows,
-                empty_message="No STRIDE threats were identified.",
+            attack_path = " → ".join(
+                self._cell(step, MarkdownCellLimit.MEDIUM)
+                for step in threat.provenance.attack_path
             )
-        )
+            blocks.extend(
+                [
+                    f"### {self._escape(threat.id)}: {self._escape(threat.name)}",
+                    "",
+                    f"- **Category:** {threat.category.value}",
+                    f"- **Status:** {threat.status.value}",
+                    f"- **Impact:** {self._cell(threat.impact, MarkdownCellLimit.LONG)}",
+                    f"- **Component:** {self._escape(threat.component_id) if threat.component_id else '—'}",
+                    f"- **Data flow:** {self._escape(threat.data_flow_id) if threat.data_flow_id else '—'}",
+                    f"- **Asset:** {self._escape(threat.asset_id) if threat.asset_id else '—'}",
+                    f"- **Entry point:** {self._escape(threat.provenance.entry_point_id) if threat.provenance.entry_point_id else '—'}",
+                    f"- **Trust boundary:** {self._escape(threat.provenance.trust_boundary_id) if threat.provenance.trust_boundary_id else '—'}",
+                    f"- **Actor:** {self._escape(threat.provenance.actor_id) if threat.provenance.actor_id else '—'}",
+                    f"- **Exit point:** {self._escape(threat.provenance.exit_point_id) if threat.provenance.exit_point_id else '—'}",
+                    f"- **Affected components:** {self._join_ids(threat.affected_component_ids)}",
+                    f"- **Preconditions:** {self._join_text(threat.attack_preconditions)}",
+                    f"- **Attack path id:** {self._escape(threat.provenance.attack_path_id)}",
+                    f"- **Attack path:** {attack_path}",
+                    f"- **Rationale:** {self._cell(threat.provenance.rationale, MarkdownCellLimit.LONG)}",
+                    "",
+                    "**Evidence**",
+                    "",
+                    *evidence_lines,
+                    "",
+                    "**Linked mitigations**",
+                    "",
+                    *mitigation_lines,
+                    "",
+                ]
+            )
+        return "\n".join(blocks).rstrip()
 
     def format_risks_table(self, risks: RiskRegister) -> str:
         """Format risks as a Markdown table.
@@ -516,10 +570,17 @@ class DefaultMarkdownSectionFormatter:
         return "\n".join([header, separator, *body])
 
     def _join_ids(self, values: list[str]) -> str:
+        """Join identifier lists into a compact cell value."""
         if not values:
             return "—"
         joined = ", ".join(sorted(values))
         return self._cell(joined, MarkdownCellLimit.MEDIUM)
+
+    def _join_text(self, values: list[str]) -> str:
+        """Join free-text lists into a compact cell value."""
+        if not values:
+            return "—"
+        return "; ".join(self._cell(value, MarkdownCellLimit.MEDIUM) for value in values)
 
     def _cell(self, value: str, limit: MarkdownCellLimit) -> str:
         return self._escape(self._truncate(value, limit))

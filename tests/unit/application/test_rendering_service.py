@@ -48,9 +48,10 @@ class TestRenderingServicePositive:
 
         saved = service.render(input_path, [" JSON ", "json", "mermaid"], output_dir)
 
-        assert len(saved) == 4
+        assert len(saved) == 5
         assert (output_dir / "json" / "artifact-bundle.json").is_file()
         assert (output_dir / "mermaid" / "dfd.mmd").is_file()
+        assert (output_dir / "mermaid" / "architecture-graph.mmd").is_file()
 
 
 class TestRenderingServiceNegative:

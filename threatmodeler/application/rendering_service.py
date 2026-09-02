@@ -104,6 +104,7 @@ class RenderingService:
         if format_name == OutputFormat.MERMAID:
             return [
                 (ArtifactKind.DFD, bundle.data_flow_diagram),
+                (ArtifactKind.ARCHITECTURE_GRAPH, bundle.architecture_graph),
                 (ArtifactKind.ATTACK_TREE, bundle.attack_tree),
                 (ArtifactKind.TRUST_BOUNDARIES, bundle.trust_boundary_map),
             ]

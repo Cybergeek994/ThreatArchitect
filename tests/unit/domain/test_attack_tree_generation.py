@@ -4,11 +4,18 @@ from threatmodeler.contracts.artifacts import (
     StrideCategory,
     StrideThreat,
     StrideThreatRegister,
+    ThreatProvenance,
     ThreatStatus,
 )
 from threatmodeler.contracts.system_model import CanonicalSystemModel
 from threatmodeler.domain.artifact_metadata import ArtifactMetadataService
 from threatmodeler.domain.attack_tree_generation import AttackTreeGenerationService
+
+from tests.fixtures.graph_fixtures import (
+    architecture_graph_for_model,
+    attack_path_narrative,
+    default_attack_path_id,
+)
 
 
 class TestAttackTreeGenerationPositive:
@@ -18,6 +25,8 @@ class TestAttackTreeGenerationPositive:
         self,
         canonical_system_model: CanonicalSystemModel,
     ) -> None:
+        graph = architecture_graph_for_model(canonical_system_model)
+        attack_path_id = default_attack_path_id(graph)
         threat = StrideThreat(
             id="threat-tree",
             name="Tamper payment flow",
@@ -30,6 +39,13 @@ class TestAttackTreeGenerationPositive:
             status=ThreatStatus.IDENTIFIED,
             attack_preconditions=["Reach the API", "Obtain a valid token"],
             impact="Payment integrity could be compromised.",
+            provenance=ThreatProvenance(
+                entry_point_id=canonical_system_model.entry_points[0].id,
+                actor_id=canonical_system_model.entry_points[0].actor_id,
+                attack_path_id=attack_path_id,
+                attack_path=attack_path_narrative(graph, attack_path_id),
+                rationale="Identified because payment flow integrity depends on the API.",
+            ),
         )
         threat_register = StrideThreatRegister(
             artifact_id="stride-threat-register",

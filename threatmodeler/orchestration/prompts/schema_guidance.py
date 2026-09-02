@@ -11,6 +11,7 @@ from typing import get_args, get_origin
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.fields import FieldInfo
 
+from threatmodeler.contracts.artifacts.enums import ProvenanceConstraintKey
 from threatmodeler.contracts.reference_graph import (
     ReferenceGraphEdgeSpec,
     ReferenceGraphNodeSpec,
@@ -275,8 +276,8 @@ def build_coverage_constraints() -> tuple[PromptConstraint, ...]:
             key="coverage_affected_components",
             text=(
                 "Populate `affected_component_ids` on each threat with component "
-                "ids that could be impacted (blast radius) when inferable from "
-                "the input."
+                "ids that could be impacted (blast radius) when those ids are "
+                "present in the input."
             ),
         ),
         PromptConstraint(
@@ -284,6 +285,57 @@ def build_coverage_constraints() -> tuple[PromptConstraint, ...]:
             text=(
                 "Use `partially_mitigated` in `status` when some but not all "
                 "countermeasures are evidenced for a threat."
+            ),
+        ),
+        PromptConstraint(
+            key=ProvenanceConstraintKey.RATIONALE.value,
+            text=(
+                "Every threat must populate `provenance.rationale` with a non-empty "
+                "explanation of why the threat was identified from the input."
+            ),
+        ),
+        PromptConstraint(
+            key=ProvenanceConstraintKey.ATTACK_PATH.value,
+            text=(
+                "Every threat must populate `provenance.attack_path` with ordered "
+                "graph node names from the cited attack path."
+            ),
+        ),
+        PromptConstraint(
+            key=ProvenanceConstraintKey.ATTACK_PATH_ID.value,
+            text=(
+                "Every threat must populate `provenance.attack_path_id` with an id "
+                "from `architecture_graph.attack_paths` in the input payload."
+            ),
+        ),
+        PromptConstraint(
+            key=ProvenanceConstraintKey.ENTRY_POINTS.value,
+            text=(
+                "Every threat that targets a component of an external or partner "
+                "entry point must set `provenance.entry_point_id` to that entry "
+                "point's id."
+            ),
+        ),
+        PromptConstraint(
+            key=ProvenanceConstraintKey.TRUST_BOUNDARY.value,
+            text=(
+                "Every threat linked to a data flow with `trust_boundary_crossed=true` "
+                "must set `provenance.trust_boundary_id` to a known trust-boundary id "
+                "from the input."
+            ),
+        ),
+        PromptConstraint(
+            key=ProvenanceConstraintKey.ACTOR.value,
+            text=(
+                "When the linked entry point has a non-null `actor_id`, the threat "
+                "must set `provenance.actor_id` to that same id."
+            ),
+        ),
+        PromptConstraint(
+            key=ProvenanceConstraintKey.EVIDENCE.value,
+            text=(
+                "Every threat must include non-empty `evidence` citing source "
+                "excerpts already present in the input payload."
             ),
         ),
     )

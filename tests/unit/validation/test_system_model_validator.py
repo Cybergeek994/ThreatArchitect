@@ -491,6 +491,36 @@ class TestSystemModelValidatorErrors:
 
         assert violations == []
 
+    def test_external_entry_point_boundary_rule_skips_when_no_external_entries(
+        self,
+        canonical_system_model: CanonicalSystemModel,
+    ) -> None:
+        model = canonical_system_model.model_copy(
+            update={
+                "entry_points": [
+                    entry.model_copy(update={"exposure": ExposureType.INTERNAL})
+                    for entry in canonical_system_model.entry_points
+                ]
+            }
+        )
+
+        assert ExternalEntryPointBoundaryRule().validate(model) == []
+
+    def test_external_exposure_coverage_rule_skips_when_no_external_entries(
+        self,
+        canonical_system_model: CanonicalSystemModel,
+    ) -> None:
+        model = canonical_system_model.model_copy(
+            update={
+                "entry_points": [
+                    entry.model_copy(update={"exposure": ExposureType.INTERNAL})
+                    for entry in canonical_system_model.entry_points
+                ]
+            }
+        )
+
+        assert ExternalExposureCoverageRule().validate(model) == []
+
     def test_production_rules_accept_canonical_fixture(
         self,
         canonical_system_model: CanonicalSystemModel,
