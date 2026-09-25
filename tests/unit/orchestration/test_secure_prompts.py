@@ -8,7 +8,6 @@ from pydantic import BaseModel, JsonValue, ValidationError
 from threatmodeler.contracts.artifacts import (
     AbuseMisuseCases,
     AttackTree,
-    ControlMapping,
     DataFlowDiagramModel,
     ExecutiveSummary,
     MissingInformationReport,
@@ -30,7 +29,6 @@ from threatmodeler.orchestration.prompts import (
     AbuseCasePromptBuilder,
     AttackTreePromptBuilder,
     CanonicalSystemModelPromptBuilder,
-    ControlMappingPromptBuilder,
     DfdPromptBuilder,
     ExecutiveSummaryPromptBuilder,
     MissingInformationPromptBuilder,
@@ -97,7 +95,6 @@ class TestSecurePromptsPositive:
                 "generate_security_requirements",
                 SecurityRequirements,
             ),
-            (ControlMappingPromptBuilder, "generate_control_mapping", ControlMapping),
             (ExecutiveSummaryPromptBuilder, "generate_executive_summary", ExecutiveSummary),
             (TechnicalReportPromptBuilder, "generate_technical_report", TechnicalThreatModelReport),
         ],

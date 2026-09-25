@@ -7,7 +7,6 @@ from threatmodeler.contracts.artifacts.stride_context import PreStrideArtifacts
 from threatmodeler.contracts.system_model import CanonicalSystemModel
 from threatmodeler.domain.architecture_graph_generation import ArchitectureGraphGenerationService
 from threatmodeler.domain.attack_tree_generation import AttackTreeGenerationService
-from threatmodeler.domain.control_mapping import ControlMappingService
 from threatmodeler.domain.dfd_generation import DfdGenerationService
 from threatmodeler.domain.downstream_artifact_generation import (
     DeterministicDownstreamArtifactGenerationStrategy,
@@ -33,7 +32,6 @@ class TestDeterministicDownstreamArtifactGenerationPositive:
         stride_service = Mock(spec=StrideThreatGenerationService)
         risk_service = Mock(spec=RiskScoringService)
         mitigation_service = Mock(spec=MitigationGenerationService)
-        control_mapping_service = Mock(spec=ControlMappingService)
         report_service = Mock(spec=ReportGenerationService)
         strategy = DeterministicDownstreamArtifactGenerationStrategy(
             dfd_service=dfd_service,
@@ -42,14 +40,16 @@ class TestDeterministicDownstreamArtifactGenerationPositive:
             stride_service=stride_service,
             risk_service=risk_service,
             mitigation_service=mitigation_service,
-            control_mapping_service=control_mapping_service,
             report_service=report_service,
         )
         threats = Mock(spec=StrideThreatRegister)
         risks = Mock(spec=RiskRegister)
         mitigations = Mock(spec=MitigationPlan)
-        requirements = Mock()
-        pre_stride = PreStrideArtifacts(**stride_upstream_context_for_model(canonical_system_model).model_dump(exclude={"architecture_graph"}))
+        pre_stride = PreStrideArtifacts(
+            **stride_upstream_context_for_model(canonical_system_model).model_dump(
+                exclude={"architecture_graph"}
+            )
+        )
 
         assert strategy.generate_dfd(canonical_system_model) is dfd_service.generate.return_value
         assert (
@@ -81,12 +81,6 @@ class TestDeterministicDownstreamArtifactGenerationPositive:
             is report_service.generate_missing_information.return_value
         )
         assert (
-            strategy.generate_control_mapping(
-                canonical_system_model, risks, mitigations, requirements, threats
-            )
-            is control_mapping_service.generate.return_value
-        )
-        assert (
             strategy.generate_executive_summary(canonical_system_model, threats, risks, mitigations)
             is report_service.generate_executive_summary.return_value
         )
@@ -104,9 +98,6 @@ class TestDeterministicDownstreamArtifactGenerationPositive:
             canonical_system_model, threats, risks
         )
         report_service.generate_missing_information.assert_called_once_with(canonical_system_model)
-        control_mapping_service.generate.assert_called_once_with(
-            canonical_system_model, risks, mitigations, requirements
-        )
         report_service.generate_executive_summary.assert_called_once_with(
             canonical_system_model, threats, risks, mitigations
         )
@@ -131,7 +122,6 @@ class TestDeterministicDownstreamArtifactGenerationNegative:
             stride_service=Mock(spec=StrideThreatGenerationService),
             risk_service=risk_service,
             mitigation_service=mitigation_service,
-            control_mapping_service=Mock(spec=ControlMappingService),
             report_service=Mock(spec=ReportGenerationService),
         )
 

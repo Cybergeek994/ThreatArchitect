@@ -6,7 +6,6 @@ from threatmodeler.contracts.artifacts import (
     AbuseMisuseCases,
     ArchitectureGraph,
     AttackTree,
-    ControlMapping,
     DataFlowDiagramModel,
     ExecutiveSummary,
     MissingInformationReport,
@@ -34,7 +33,6 @@ def create_downstream_schema_registry() -> PydanticOutputSchemaRegistry:
         "MitigationPlan": MitigationPlan,
         "SecurityRequirements": SecurityRequirements,
         "MissingInformationReport": MissingInformationReport,
-        "ControlMapping": ControlMapping,
         "ExecutiveSummary": ExecutiveSummary,
         "TechnicalThreatModelReport": TechnicalThreatModelReport,
     }

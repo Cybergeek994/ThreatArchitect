@@ -45,7 +45,6 @@ class TestThreatModelingServicePositive:
             original.generate_security_requirements
         )
         downstream.generate_missing_information.side_effect = original.generate_missing_information
-        downstream.generate_control_mapping.side_effect = original.generate_control_mapping
         downstream.generate_executive_summary.side_effect = original.generate_executive_summary
         downstream.generate_technical_report.side_effect = original.generate_technical_report
         service._downstream_strategy = downstream
@@ -62,7 +61,6 @@ class TestThreatModelingServicePositive:
             "generate_mitigation_plan",
             "generate_security_requirements",
             "generate_missing_information",
-            "generate_control_mapping",
             "generate_executive_summary",
             "generate_technical_report",
         ]
@@ -82,7 +80,7 @@ class TestThreatModelingServicePositive:
 
         bundle = service.generate(canonical_system_model)
 
-        assert validator.validate.call_count == 23
+        assert validator.validate.call_count == 22
         assert bundle.stride_threat_register.threats
 
 

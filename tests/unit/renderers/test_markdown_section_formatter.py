@@ -14,9 +14,6 @@ from threatmodeler.contracts.artifacts import (
     AttackTreeNode,
     CompletenessCheckStatus,
     ComponentInventory,
-    ControlMapping,
-    ControlMappingEntry,
-    ControlStatus,
     ControlType,
     EntryPointInventory,
     MissingInformationItem,
@@ -349,27 +346,6 @@ class TestDefaultMarkdownSectionFormatterPositive:
         assert "Queue reachable" in rendered
         assert "Duplicate settlement" in rendered
 
-    def test_format_control_mappings_table_includes_framework(self) -> None:
-        controls = ControlMapping.model_construct(
-            **_artifact_fields("controls"),
-            controls=[
-                ControlMappingEntry.model_construct(
-                    **_item_fields("ctrl-1", "IA-2"),
-                    framework="OWASP ASVS",
-                    framework_control_id="V2.1.1",
-                    status=ControlStatus.PARTIAL,
-                    threat_ids=["threat-1"],
-                    risk_ids=["risk-1"],
-                )
-            ],
-        )
-
-        rendered = DefaultMarkdownSectionFormatter().format_control_mappings_table(controls)
-
-        assert "OWASP ASVS" in rendered
-        assert "V2.1.1" in rendered
-        assert "partial" in rendered
-
     def test_format_completeness_section_satisfied_summary(self) -> None:
         report = ThreatModelCompletenessReport.model_construct(
             **_artifact_fields("completeness"),
@@ -539,16 +515,6 @@ class TestDefaultMarkdownSectionFormatterEmpty:
         assert (
             DefaultMarkdownSectionFormatter().format_abuse_cases_section(cases)
             == "No abuse or misuse cases were documented."
-        )
-
-    def test_empty_control_mappings(self) -> None:
-        controls = ControlMapping.model_construct(
-            **_artifact_fields("controls"),
-            controls=[],
-        )
-        assert (
-            DefaultMarkdownSectionFormatter().format_control_mappings_table(controls)
-            == "No control mappings were documented."
         )
 
     def test_empty_completeness(self) -> None:

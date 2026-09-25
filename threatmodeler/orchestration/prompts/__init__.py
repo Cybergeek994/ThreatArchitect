@@ -10,9 +10,6 @@ from threatmodeler.orchestration.prompts.artifact_builders import (
     CanonicalSystemModelPromptBuilder as CanonicalSystemModelPromptBuilder,
 )
 from threatmodeler.orchestration.prompts.artifact_builders import (
-    ControlMappingPromptBuilder as ControlMappingPromptBuilder,
-)
-from threatmodeler.orchestration.prompts.artifact_builders import (
     DfdPromptBuilder as DfdPromptBuilder,
 )
 from threatmodeler.orchestration.prompts.artifact_builders import (

@@ -91,7 +91,6 @@ class ArtifactGenerationService:
             ("security-requirements", bundle.security_requirements),
             ("assumptions", bundle.assumptions_register),
             ("missing-information", bundle.missing_information_report),
-            ("control-mapping", bundle.control_mapping),
             ("executive-summary", bundle.executive_summary),
             ("technical-report", bundle.technical_report),
             ("completeness-report", bundle.completeness_report),

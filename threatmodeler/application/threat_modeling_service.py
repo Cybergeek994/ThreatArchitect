@@ -121,13 +121,6 @@ class ThreatModelingService:
         )
         assumptions = self._report_service.generate_assumptions(model)
         missing_information = self._downstream_strategy.generate_missing_information(model)
-        control_mapping = self._downstream_strategy.generate_control_mapping(
-            model,
-            risk_register,
-            mitigation_plan,
-            security_requirements,
-            stride_threats,
-        )
         executive_summary = self._downstream_strategy.generate_executive_summary(
             model,
             stride_threats,
@@ -169,7 +162,6 @@ class ThreatModelingService:
             security_requirements,
             assumptions,
             missing_information,
-            control_mapping,
             executive_summary,
             technical_report,
             completeness_report,
@@ -203,7 +195,6 @@ class ThreatModelingService:
             security_requirements=security_requirements,
             assumptions_register=assumptions,
             missing_information_report=missing_information,
-            control_mapping=control_mapping,
             executive_summary=executive_summary,
             technical_report=technical_report,
             completeness_report=completeness_report,

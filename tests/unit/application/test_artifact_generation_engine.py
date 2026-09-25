@@ -44,7 +44,7 @@ class TestArtifactGenerationEnginePositive:
         bundle = service.generate(canonical_system_model)
 
         assert isinstance(bundle, ArtifactBundle)
-        assert validator.validate.call_count == 23
+        assert validator.validate.call_count == 22
         assert bundle.component_inventory.components[0].id == "component-api"
         assert bundle.asset_inventory.assets[0].data_store_ids == ["store-payments"]
         assert bundle.data_flow_diagram.data_flows[0].id == "flow-payment"
@@ -53,14 +53,13 @@ class TestArtifactGenerationEnginePositive:
         assert bundle.risk_register.risks[0].threat_ids
         assert bundle.mitigation_plan.mitigations[0].risk_ids
         assert bundle.security_requirements.requirements[0].threat_ids
-        assert bundle.control_mapping.controls[0].requirement_ids
         assert bundle.missing_information_report.items[0].question == (
             "Token lifetime is not documented."
         )
         assert ArtifactBundle.model_validate_json(bundle.model_dump_json()) == bundle
         assert_bundle_integrity(bundle, system_model=canonical_system_model)
 
-    def test_file_workflow_writes_all_twenty_named_artifacts(
+    def test_file_workflow_writes_all_named_artifacts(
         self,
         tmp_path: Path,
         agent_provider: Mock,
@@ -93,13 +92,12 @@ class TestArtifactGenerationEnginePositive:
             "security-requirements.json",
             "assumptions.json",
             "missing-information.json",
-            "control-mapping.json",
             "executive-summary.json",
             "technical-report.json",
             "completeness-report.json",
             "artifact-bundle.json",
         }
-        assert len(result.artifacts) == 22
+        assert len(result.artifacts) == 21
         assert {artifact.path.name for artifact in result.artifacts} == expected_names
         assert result.bundle.path.name == "artifact-bundle.json"
         assert {path.name for path in output_dir.glob("*.json")} == expected_names
@@ -150,7 +148,7 @@ class TestArtifactGenerationEnginePositive:
         )
 
         assert result.exit_code == 0
-        assert len(list(output_dir.glob("*.json"))) == 22
+        assert len(list(output_dir.glob("*.json"))) == 21
         assert "artifact-bundle.json" in result.stdout
         unused_ingestion_factory.assert_not_called()
         unused_extraction_factory.assert_not_called()

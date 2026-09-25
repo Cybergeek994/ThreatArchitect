@@ -161,7 +161,7 @@ class TestOutputRenderersPositive:
         assert "## Attack Scenarios" in rendered.content
         assert "### Attack Tree Summary" in rendered.content
         assert "### Abuse Cases" in rendered.content
-        assert "## Control Mappings" in rendered.content
+        assert "## Completeness and Gaps" in rendered.content
         assert "## Completeness and Gaps" in rendered.content
         assert "### Verify Phase Completeness" in rendered.content
         assert "### Missing Information" in rendered.content

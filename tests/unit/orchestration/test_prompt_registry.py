@@ -6,7 +6,6 @@ from threatmodeler.orchestration.prompts import SecurePromptTemplate
 from threatmodeler.orchestration.prompts.artifact_builders import (
     AbuseCasePromptBuilder,
     AttackTreePromptBuilder,
-    ControlMappingPromptBuilder,
     DfdPromptBuilder,
     ExecutiveSummaryPromptBuilder,
     MissingInformationPromptBuilder,
@@ -23,7 +22,7 @@ from threatmodeler.validation.pydantic_schema_provider import PydanticSchemaProv
 class TestPromptRegistryPositive:
     """Verify the factory exposes one builder per downstream artifact task."""
 
-    def test_factory_creates_frozen_registry_with_ten_builder_types(self) -> None:
+    def test_factory_creates_frozen_registry_with_builder_types(self) -> None:
         registry = ArtifactPromptBuilderFactory(
             SecurePromptTemplate(),
             PydanticSchemaProvider(),
@@ -37,7 +36,6 @@ class TestPromptRegistryPositive:
         assert type(registry.risk_register) is RiskRegisterPromptBuilder
         assert type(registry.mitigation_plan) is MitigationPlanPromptBuilder
         assert type(registry.security_requirements) is SecurityRequirementsPromptBuilder
-        assert type(registry.control_mapping) is ControlMappingPromptBuilder
         assert type(registry.executive_summary) is ExecutiveSummaryPromptBuilder
         assert type(registry.technical_report) is TechnicalReportPromptBuilder
 

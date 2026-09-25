@@ -8,9 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from threatmodeler.shared.constants import (
     AgentProviderName,
-    AsvsFrameworkVersion,
     AzureOpenAiApiVersion,
-    ControlFramework,
     DefaultPathName,
     EnvironmentVariable,
     LogLevel,
@@ -38,11 +36,6 @@ class Settings(BaseSettings):
     agent_journal_enabled: bool = True
     agent_low_confidence_threshold: Annotated[float, Field(ge=0.0, le=1.0)] = 0.5
     fail_on_missing_information: bool = False
-    control_framework: ControlFramework = ControlFramework.OWASP_ASVS
-    control_framework_version: Annotated[str, Field(min_length=1)] = AsvsFrameworkVersion.V5_0_0
-    asvs_catalog_cache_dir: Path = Path(".cache/asvs-catalog")
-    asvs_catalog_ttl_hours: Annotated[int, Field(ge=1)] = 168
-    asvs_catalog_fetch_url: Annotated[str, Field(min_length=1)] | None = None
     azure_openai_api_version: Annotated[str, Field(min_length=1)] = (
         AzureOpenAiApiVersion.PREVIEW_2024_08_01
     )
@@ -58,24 +51,6 @@ class Settings(BaseSettings):
     azure_openai_api_key: SecretStr | None = None
     azure_openai_endpoint: AnyHttpUrl | None = None
     github_token: SecretStr | None = None
-
-    @field_validator("control_framework", mode="before")
-    @classmethod
-    def require_supported_control_framework(cls, control_framework: object) -> object:
-        """Restrict control mapping to the supported OWASP ASVS catalog.
-
-        Args:
-            control_framework: Candidate framework identifier from configuration.
-
-        Returns:
-            Normalized framework identifier.
-
-        Raises:
-            ValueError: If the framework is not the supported OWASP ASVS catalog.
-        """
-        if isinstance(control_framework, str):
-            return control_framework.strip().lower()
-        return control_framework  # pragma: no cover
 
     @field_validator("output_dir")
     @classmethod

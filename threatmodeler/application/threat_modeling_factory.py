@@ -3,10 +3,6 @@
 from threatmodeler.application.threat_modeling_service import ThreatModelingService
 from threatmodeler.config.settings import Settings
 from threatmodeler.domain.artifact_metadata import ArtifactMetadataService
-from threatmodeler.domain.control_catalogs.control_mapping_candidate_service import (
-    ControlMappingCandidateService,
-)
-from threatmodeler.domain.control_catalogs.llm_asvs_semantic_ranker import LlmAsvsSemanticRanker
 from threatmodeler.domain.downstream_artifact_generation import (
     AgentDownstreamArtifactGenerationStrategy,
     DownstreamArtifactGenerationStrategy,
@@ -18,9 +14,6 @@ from threatmodeler.domain.threat_model_completeness import ThreatModelCompletene
 from threatmodeler.domain.stride_generation import (
     AgentStrideThreatGenerationStrategy,
     StrideThreatGenerationService,
-)
-from threatmodeler.infrastructure.control_catalogs.asvs_control_registry_factory import (
-    AsvsControlRegistryFactory,
 )
 from threatmodeler.orchestration.prompts import (
     SchemaRepairPromptBuilder,
@@ -47,7 +40,6 @@ class ThreatModelingServiceFactory:
         tool_calling_provider: ToolCallingProvider,
         agent_provider: AgentProvider,
         artifact_validator: ArtifactValidator | None = None,
-        candidate_service: ControlMappingCandidateService | None = None,
     ) -> None:
         self._settings = settings
         self._schema_provider = schema_provider
@@ -56,7 +48,6 @@ class ThreatModelingServiceFactory:
         self._tool_calling_provider = tool_calling_provider
         self._agent_provider = agent_provider
         self._artifact_validator = artifact_validator
-        self._candidate_service = candidate_service
 
     def create(self) -> ThreatModelingService:
         """Create a fully composed threat-modeling facade.
@@ -96,16 +87,6 @@ class ThreatModelingServiceFactory:
         )
 
     def _create_downstream_strategy(self) -> DownstreamArtifactGenerationStrategy:
-        registry_factory = AsvsControlRegistryFactory.from_settings(self._settings)
-        registry = registry_factory.create()
-        candidate_service = self._candidate_service or ControlMappingCandidateService(
-            registry,
-            LlmAsvsSemanticRanker(
-                self._agent_provider,
-                registry,
-                max_attempts=self._settings.agent_provider_max_attempts,
-            ),
-        )
         return AgentDownstreamArtifactGenerationStrategy(
             tool_calling_provider=self._tool_calling_provider,
             prompt_registry=ArtifactPromptBuilderFactory(
@@ -113,7 +94,5 @@ class ThreatModelingServiceFactory:
                 self._schema_provider,
             ).create(),
             schema_provider=self._schema_provider,
-            candidate_service=candidate_service,
-            control_registry=registry,
             max_attempts=self._settings.agent_provider_max_attempts,
         )

@@ -12,7 +12,6 @@ from threatmodeler.contracts.artifacts import (
     AttackTree,
     AttackTreeNode,
     ComponentInventory,
-    ControlMapping,
     EntryPointInventory,
     MissingInformationReport,
     MitigationPlan,
@@ -87,10 +86,6 @@ class MarkdownSectionFormatter(Protocol):
 
     def format_abuse_cases_section(self, cases: AbuseMisuseCases) -> str:
         """Format abuse/misuse cases as Markdown subsections."""
-        ...
-
-    def format_control_mappings_table(self, controls: ControlMapping) -> str:
-        """Format control mappings as a Markdown table."""
         ...
 
     def format_completeness_section(self, report: ThreatModelCompletenessReport) -> str:
@@ -441,41 +436,6 @@ class DefaultMarkdownSectionFormatter:
                 ]
             )
         return "\n".join(blocks).rstrip()
-
-    def format_control_mappings_table(self, controls: ControlMapping) -> str:
-        """Format control mappings as a Markdown table.
-
-        Args:
-            controls: Validated control-mapping artifact.
-
-        Returns:
-            Markdown table or empty-message paragraph.
-        """
-        rows = tuple(
-            (
-                self._cell(item.id, MarkdownCellLimit.SHORT),
-                self._cell(item.framework, MarkdownCellLimit.MEDIUM),
-                self._cell(item.framework_control_id, MarkdownCellLimit.SHORT),
-                self._cell(item.status.value, MarkdownCellLimit.SHORT),
-                self._join_ids(item.threat_ids),
-                self._join_ids(item.risk_ids),
-            )
-            for item in sorted(controls.controls, key=lambda item: item.id)
-        )
-        return self._render_table(
-            MarkdownTableSpec(
-                headers=(
-                    "ID",
-                    "Framework",
-                    "Control ID",
-                    "Status",
-                    "Threats",
-                    "Risks",
-                ),
-                rows=rows,
-                empty_message="No control mappings were documented.",
-            )
-        )
 
     def format_completeness_section(self, report: ThreatModelCompletenessReport) -> str:
         """Format completeness checks as a Markdown checklist.

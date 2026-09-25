@@ -8,7 +8,6 @@ from threatmodeler.contracts.artifacts import (
     AbuseMisuseCases,
     ArchitectureGraph,
     AttackTree,
-    ControlMapping,
     DataFlowDiagramModel,
     ExecutiveSummary,
     MissingInformationReport,
@@ -33,7 +32,6 @@ from threatmodeler.orchestration.prompts.schema_guidance import (
 )
 from threatmodeler.orchestration.prompts.secure_template import SecurePromptTemplate
 from threatmodeler.ports.schema_provider import SchemaProvider
-from threatmodeler.shared.constants import ControlFrameworkName
 
 
 def _merge_constraints(
@@ -478,31 +476,6 @@ class SecurityRequirementsPromptBuilder(_SchemaBoundArtifactPromptBuilder):
             constraints=(
                 "Write testable shall-statements with a verification method.",
                 "Link requirements to supplied threats and architecture identifiers.",
-            ),
-        )
-
-
-class ControlMappingPromptBuilder(_SchemaBoundArtifactPromptBuilder):
-    """Build secure prompts for security control mappings."""
-
-    def __init__(
-        self,
-        secure_template: SecurePromptTemplate,
-        schema_provider: SchemaProvider,
-    ) -> None:
-        super().__init__(
-            secure_template,
-            schema_provider,
-            task_name="generate_control_mapping",
-            output_model=ControlMapping,
-            objective="Map validated findings and requirements to supplied control references.",
-            constraints=(
-                "Map only to pre-ranked OWASP ASVS 5.0 control ids in "
-                "ranked_candidates_by_requirement; use framework value "
-                f"'{ControlFrameworkName.OWASP_ASVS}'.",
-                "Prefer rank #1 for each requirement; use alternates only when rationale clearly favors them.",
-                "Do not invent framework identifiers or implementation status.",
-                "Preserve all supplied requirement, threat, and risk links.",
             ),
         )
 

@@ -7,18 +7,8 @@ from pydantic import JsonValue
 from threatmodeler.contracts.artifacts import ArtifactModel
 from threatmodeler.contracts.system_model import CanonicalSystemModel
 from threatmodeler.domain.artifact_metadata import ArtifactMetadataService
-from threatmodeler.domain.control_catalogs.control_mapping_candidate_service import (
-    ControlMappingCandidateService,
-)
 from threatmodeler.domain.downstream_artifact_generation import (
     AgentDownstreamArtifactGenerationStrategy,
-)
-from threatmodeler.infrastructure.control_catalogs.asvs_control_registry_factory import (
-    AsvsControlRegistryFactory,
-)
-from tests.fixtures.mock_asvs_semantic_ranker import (
-    MockAsvsSemanticRanker,
-    create_mock_control_mapping_service,
 )
 from threatmodeler.domain.mitigation_generation import MitigationGenerationService
 from threatmodeler.domain.risk_scoring import RiskScoringService
@@ -57,11 +47,6 @@ def agent_downstream_strategy_factory() -> Callable[
         task_overrides: dict[str, dict[str, JsonValue]] | None = None,
     ) -> AgentDownstreamArtifactGenerationStrategy:
         schema_provider = PydanticSchemaProvider()
-        registry = AsvsControlRegistryFactory.packaged().create()
-        candidate_service = ControlMappingCandidateService(
-            registry,
-            MockAsvsSemanticRanker(registry),
-        )
         return AgentDownstreamArtifactGenerationStrategy(
             tool_calling_provider=create_mock_agent_provider_for_agent_assisted(task_overrides),
             prompt_registry=ArtifactPromptBuilderFactory(
@@ -69,8 +54,6 @@ def agent_downstream_strategy_factory() -> Callable[
                 schema_provider,
             ).create(),
             schema_provider=schema_provider,
-            candidate_service=candidate_service,
-            control_registry=registry,
         )
 
     return create
@@ -104,9 +87,6 @@ class TestAgentDownstreamArtifactGenerationPositive:
                 strategy.generate_missing_information(model)
             ),
             lambda strategy, model, threats, risks, mitigations, requirements: (
-                strategy.generate_control_mapping(model, risks, mitigations, requirements, threats)
-            ),
-            lambda strategy, model, threats, risks, mitigations, requirements: (
                 strategy.generate_executive_summary(model, threats, risks, mitigations)
             ),
             lambda strategy, model, threats, risks, mitigations, requirements: (
@@ -114,7 +94,6 @@ class TestAgentDownstreamArtifactGenerationPositive:
             ),
         ],
     )
-
     def test_all_downstream_methods_return_validated_artifacts(
         self,
         canonical_system_model: CanonicalSystemModel,
@@ -192,14 +171,6 @@ class TestAgentDownstreamArtifactGenerationErrors:
                 ),
             ),
             (
-                "generate_control_mapping",
-                lambda strategy, model, threats, risks, mitigations, requirements: (
-                    strategy.generate_control_mapping(
-                        model, risks, mitigations, requirements, threats
-                    )
-                ),
-            ),
-            (
                 "generate_executive_summary",
                 lambda strategy, model, threats, risks, mitigations, requirements: (
                     strategy.generate_executive_summary(model, threats, risks, mitigations)
@@ -213,7 +184,6 @@ class TestAgentDownstreamArtifactGenerationErrors:
             ),
         ],
     )
-
     def test_invalid_agent_output_raises_schema_validation_error(
         self,
         canonical_system_model: CanonicalSystemModel,
@@ -240,44 +210,3 @@ class TestAgentDownstreamArtifactGenerationErrors:
             invoke(strategy, canonical_system_model, threats, risks, mitigations, requirements)
 
         assert captured.value.error_code == "AGENT_ARTIFACT_SCHEMA_INVALID"
-
-
-class TestAgentControlMappingCatalogErrors:
-    """Verify invented ASVS identifiers fail the catalog rule."""
-
-    def test_unknown_asvs_id_raises_catalog_error(
-        self,
-        canonical_system_model: CanonicalSystemModel,
-        stride_service: StrideThreatGenerationService,
-        agent_downstream_strategy_factory: Callable[
-            [dict[str, dict[str, JsonValue]] | None],
-            AgentDownstreamArtifactGenerationStrategy,
-        ],
-    ) -> None:
-        metadata = ArtifactMetadataService()
-        threats = stride_service.generate(stride_upstream_context_for_model(canonical_system_model))
-        risks = RiskScoringService(metadata).generate(canonical_system_model, threats)
-        mitigations = MitigationGenerationService(metadata).generate_plan(
-            canonical_system_model, risks
-        )
-        requirements = MitigationGenerationService(metadata).generate_requirements(
-            canonical_system_model, threats, risks
-        )
-        payload = (
-            create_mock_control_mapping_service(metadata)
-            .generate(canonical_system_model, risks, mitigations, requirements)
-            .model_dump(mode="json")
-        )
-        controls = payload["controls"]
-        assert isinstance(controls, list)
-        first_control = controls[0]
-        assert isinstance(first_control, dict)
-        first_control["framework_control_id"] = "AC-1"
-        strategy = agent_downstream_strategy_factory({"generate_control_mapping": payload})
-
-        with pytest.raises(AgentSchemaValidationError) as captured:
-            strategy.generate_control_mapping(
-                canonical_system_model, risks, mitigations, requirements, threats
-            )
-
-        assert captured.value.error_code == "CONTROL_MAPPING_CATALOG_INVALID"

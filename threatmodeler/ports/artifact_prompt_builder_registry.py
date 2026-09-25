@@ -20,6 +20,5 @@ class ArtifactPromptBuilderRegistry(BaseModel):
     risk_register: Annotated[PromptBuilder, SkipValidation()]
     mitigation_plan: Annotated[PromptBuilder, SkipValidation()]
     security_requirements: Annotated[PromptBuilder, SkipValidation()]
-    control_mapping: Annotated[PromptBuilder, SkipValidation()]
     executive_summary: Annotated[PromptBuilder, SkipValidation()]
     technical_report: Annotated[PromptBuilder, SkipValidation()]

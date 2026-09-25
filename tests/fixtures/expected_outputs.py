@@ -21,7 +21,6 @@ EXPECTED_ARTIFACT_JSON_NAMES: frozenset[str] = frozenset(
         "security-requirements.json",
         "assumptions.json",
         "missing-information.json",
-        "control-mapping.json",
         "executive-summary.json",
         "technical-report.json",
         "completeness-report.json",

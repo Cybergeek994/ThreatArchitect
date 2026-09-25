@@ -38,7 +38,7 @@ _BUNDLE_ENTITY_REFERENCE_FIELDS = frozenset(
 )
 _ARTIFACT_REFERENCE_FIELD = "referenced_artifact_ids"
 _COMPONENT_PLACEMENTS_FIELD = "component_placements"
-_SKIPPED_REFERENCE_FIELDS = frozenset({"artifact_id", "source_id", "framework_control_id"})
+_SKIPPED_REFERENCE_FIELDS = frozenset({"artifact_id", "source_id"})
 
 
 def collect_bundle_known_ids(
@@ -103,12 +103,6 @@ def _linkage_property_violations(bundle: ArtifactBundle) -> list[str]:
             violations.append(
                 f"Security requirement {requirement.id} must reference "
                 "component_ids and/or threat_ids"
-            )
-    for control in bundle.control_mapping.controls:
-        if not control.threat_ids and not control.risk_ids and not control.requirement_ids:
-            violations.append(
-                f"Control mapping {control.id} must reference threat_ids, "
-                "risk_ids, and/or requirement_ids"
             )
     return violations
 

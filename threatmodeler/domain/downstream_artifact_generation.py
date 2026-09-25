@@ -8,7 +8,6 @@ from threatmodeler.contracts.artifacts import (
     AbuseMisuseCases,
     ArchitectureGraph,
     AttackTree,
-    ControlMapping,
     DataFlowDiagramModel,
     ExecutiveSummary,
     MissingInformationReport,
@@ -23,11 +22,6 @@ from threatmodeler.contracts.system_model import CanonicalSystemModel
 from threatmodeler.domain.agent_schema_bound_generator import AgentSchemaBoundArtifactGenerator
 from threatmodeler.domain.architecture_graph_generation import ArchitectureGraphGenerationService
 from threatmodeler.domain.attack_tree_generation import AttackTreeGenerationService
-from threatmodeler.domain.control_catalogs.control_mapping_candidate_service import (
-    ControlMappingCandidateService,
-)
-from threatmodeler.domain.control_catalogs.asvs_control_registry import AsvsControlRegistry
-from threatmodeler.domain.control_mapping import ControlMappingService
 from threatmodeler.domain.dfd_generation import DfdGenerationService
 from threatmodeler.domain.mitigation_generation import MitigationGenerationService
 from threatmodeler.domain.report_generation import ReportGenerationService
@@ -39,13 +33,8 @@ from threatmodeler.ports.construction_journal import ConstructionJournal
 from threatmodeler.ports.prompt_builder import PromptBuilder
 from threatmodeler.ports.schema_provider import SchemaProvider
 from threatmodeler.ports.tool_calling_provider import ToolCallingProvider
-from threatmodeler.shared.constants import ControlFrameworkName
 from threatmodeler.ports.artifact_construction_session_factory import FinishValidator, ItemValidator
 from threatmodeler.validation.architecture_graph_validator import ArchitectureGraphValidatorFactory
-from threatmodeler.validation.control_mapping_candidate_validator import (
-    build_candidate_membership_validator,
-)
-from threatmodeler.validation.control_mapping_validator import ControlMappingCatalogRule
 
 
 class DownstreamArtifactGenerationStrategy(Protocol):
@@ -108,17 +97,6 @@ class DownstreamArtifactGenerationStrategy(Protocol):
         """Generate a missing-information report."""
         ...
 
-    def generate_control_mapping(
-        self,
-        model: CanonicalSystemModel,
-        risk_register: RiskRegister,
-        mitigation_plan: MitigationPlan,
-        security_requirements: SecurityRequirements,
-        threat_register: StrideThreatRegister,
-    ) -> ControlMapping:
-        """Generate control mappings from validated downstream artifacts."""
-        ...
-
     def generate_executive_summary(
         self,
         model: CanonicalSystemModel,
@@ -150,7 +128,6 @@ class DeterministicDownstreamArtifactGenerationStrategy:
         stride_service: StrideThreatGenerationService,
         risk_service: RiskScoringService,
         mitigation_service: MitigationGenerationService,
-        control_mapping_service: ControlMappingService,
         report_service: ReportGenerationService,
     ) -> None:
         self._dfd_service = dfd_service
@@ -159,7 +136,6 @@ class DeterministicDownstreamArtifactGenerationStrategy:
         self._stride_service = stride_service
         self._risk_service = risk_service
         self._mitigation_service = mitigation_service
-        self._control_mapping_service = control_mapping_service
         self._report_service = report_service
 
     def generate_dfd(self, model: CanonicalSystemModel) -> DataFlowDiagramModel:
@@ -223,22 +199,6 @@ class DeterministicDownstreamArtifactGenerationStrategy:
         """Generate a missing-information report."""
         return self._report_service.generate_missing_information(model)
 
-    def generate_control_mapping(
-        self,
-        model: CanonicalSystemModel,
-        risk_register: RiskRegister,
-        mitigation_plan: MitigationPlan,
-        security_requirements: SecurityRequirements,
-        threat_register: StrideThreatRegister,
-    ) -> ControlMapping:
-        """Generate control mappings from validated downstream artifacts."""
-        return self._control_mapping_service.generate(
-            model,
-            risk_register,
-            mitigation_plan,
-            security_requirements,
-        )
-
     def generate_executive_summary(
         self,
         model: CanonicalSystemModel,
@@ -276,8 +236,6 @@ class AgentDownstreamArtifactGenerationStrategy:
         tool_calling_provider: ToolCallingProvider,
         prompt_registry: ArtifactPromptBuilderRegistry,
         schema_provider: SchemaProvider,
-        candidate_service: ControlMappingCandidateService,
-        control_registry: AsvsControlRegistry,
         max_attempts: int = 1,
     ) -> None:
         self._generator = AgentSchemaBoundArtifactGenerator(
@@ -286,8 +244,6 @@ class AgentDownstreamArtifactGenerationStrategy:
             max_attempts=max_attempts,
         )
         self._prompt_registry = prompt_registry
-        self._candidate_service = candidate_service
-        self._control_mapping_rule = ControlMappingCatalogRule(control_registry)
         self._graph_validator_factory = ArchitectureGraphValidatorFactory()
         self._payload_builder = StrideInputPayloadBuilder()
 
@@ -411,40 +367,6 @@ class AgentDownstreamArtifactGenerationStrategy:
             prompt_builder=self._prompt_registry.missing_information,
             input_payload={"system_model": self._generator.serialize(model)},
         )
-
-    def generate_control_mapping(
-        self,
-        model: CanonicalSystemModel,
-        risk_register: RiskRegister,
-        mitigation_plan: MitigationPlan,
-        security_requirements: SecurityRequirements,
-        threat_register: StrideThreatRegister,
-    ) -> ControlMapping:
-        """Generate control mappings from validated downstream artifacts."""
-        ranked_candidates, catalog_provenance, allowed_ids = self._candidate_service.rank_all(
-            model,
-            security_requirements,
-            risk_register,
-            mitigation_plan,
-            threat_register,
-        )
-        mapping = self._generate(
-            task_name="generate_control_mapping",
-            output_model=ControlMapping,
-            prompt_builder=self._prompt_registry.control_mapping,
-            input_payload={
-                "system_model": self._generator.serialize(model),
-                "risk_register": self._generator.serialize(risk_register),
-                "mitigation_plan": self._generator.serialize(mitigation_plan),
-                "security_requirements": self._generator.serialize(security_requirements),
-                "stride_threat_register": self._generator.serialize(threat_register),
-                "ranked_candidates_by_requirement": ranked_candidates,
-                "catalog_provenance": catalog_provenance,
-                "control_framework": ControlFrameworkName.OWASP_ASVS,
-            },
-            item_validator=build_candidate_membership_validator(allowed_ids),
-        )
-        return self._control_mapping_rule.validate(mapping)
 
     def generate_executive_summary(
         self,

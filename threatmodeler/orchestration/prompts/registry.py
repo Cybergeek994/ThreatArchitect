@@ -4,7 +4,6 @@ from threatmodeler.orchestration.prompts.artifact_builders import (
     ArchitectureGraphPromptBuilder,
     AbuseCasePromptBuilder,
     AttackTreePromptBuilder,
-    ControlMappingPromptBuilder,
     DfdPromptBuilder,
     ExecutiveSummaryPromptBuilder,
     MissingInformationPromptBuilder,
@@ -53,10 +52,6 @@ class ArtifactPromptBuilderFactory:
                 self._schema_provider,
             ),
             security_requirements=SecurityRequirementsPromptBuilder(
-                self._secure_template,
-                self._schema_provider,
-            ),
-            control_mapping=ControlMappingPromptBuilder(
                 self._secure_template,
                 self._schema_provider,
             ),

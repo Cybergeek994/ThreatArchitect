@@ -9,7 +9,6 @@ from pydantic import BaseModel, JsonValue
 from threatmodeler.contracts.artifacts import (
     AbuseMisuseCases,
     AttackTree,
-    ControlMapping,
     ExecutiveSummary,
     MitigationPlan,
     RiskRegister,
@@ -35,7 +34,7 @@ from threatmodeler.contracts.system_model import CanonicalSystemModel
 from threatmodeler.contracts.schema_introspection import reference_fields_for_models
 
 # Catalog and metadata identifiers ending in ``_id`` are not cross-artifact references.
-_NON_ARTIFACT_REFERENCE_FIELDS = frozenset({"framework_control_id"})
+_NON_ARTIFACT_REFERENCE_FIELDS: frozenset[str] = frozenset()
 
 _REFERENCE_MODELS: tuple[type[BaseModel], ...] = (
     CanonicalSystemModel,
@@ -46,7 +45,6 @@ _REFERENCE_MODELS: tuple[type[BaseModel], ...] = (
     RiskRegister,
     MitigationPlan,
     SecurityRequirements,
-    ControlMapping,
     ExecutiveSummary,
     TechnicalThreatModelReport,
     TrustBoundaryMap,
