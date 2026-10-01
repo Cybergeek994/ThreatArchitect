@@ -20,7 +20,6 @@ build/
 out/
 out-*/
 out_*/
-journal/
 
 # Lock files from optional tooling (use pyproject + pip install -e ".[dev]")
 uv.lock

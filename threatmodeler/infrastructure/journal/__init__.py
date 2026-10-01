@@ -1,0 +1,1 @@
+"""Construction-journal adapters."""
