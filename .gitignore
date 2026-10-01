@@ -17,7 +17,6 @@ build/
 .cursor/
 
 # Pipeline and local run outputs
-artifacts/
 out/
 out-*/
 out_*/
